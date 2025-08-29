@@ -1,0 +1,12 @@
+﻿@model ImportadoraSonib.Domain.Entities.Product
+<h2>@Model.Name</h2>
+<img src="@Model.ImageUrl" style="max-width:320px" />
+<p>@Model.Description</p>
+<p><strong>USD @Model.Price</strong></p>
+<a class="btn btn-success"
+   href="https://wa.me/593992856725?text=@Uri.EscapeDataString($"Hola, quiero comprar: {Model.Name} (ID {Model.Id}) a USD {Model.Price}")"
+   target="_blank" rel="noopener">Comprar WhatsApp</a>
+@inject IConfiguration Cfg
+<a class="btn btn-success"
+   href="@ImportadoraSonib.Services.WhatsappLinkService.BuildLink(Cfg, p.Name, p.Id, p.Price)"
+   target="_blank" rel="noopener">Comprar WhatsApp</a>

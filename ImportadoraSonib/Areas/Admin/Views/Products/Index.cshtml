@@ -1,0 +1,43 @@
+﻿@model IEnumerable<ImportadoraSonib.Domain.Entities.Product>
+@{
+    ViewData["Title"] = "Productos";
+}
+<h2>Productos</h2>
+
+@if (TempData["ok"] != null)
+{
+    <div class="alert alert-success">@TempData["ok"]</div>
+}
+
+<p><a class="btn btn-primary" asp-action="Create">Nuevo</a></p>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Nombre</th>
+            <th>Categoría</th>
+            <th>Precio</th>
+            <th>Stock</th>
+            <th>Activo</th>
+            <th>Eliminado</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var p in Model)
+        {
+            <tr>
+                <td>@p.Name</td>
+                <td>@p.Category?.Name</td>
+                <td>USD @p.Price</td>
+                <td>@p.Stock</td>
+                <td>@p.IsActive</td>
+                <td>@p.IsDeleted</td>
+                <td class="text-end">
+                    <a class="btn btn-sm btn-secondary" asp-action="Edit" asp-route-id="@p.Id">Editar</a>
+                    <a class="btn btn-sm btn-danger" asp-action="Delete" asp-route-id="@p.Id">Eliminar</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

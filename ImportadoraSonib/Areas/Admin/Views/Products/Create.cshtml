@@ -1,0 +1,49 @@
+﻿@model ImportadoraSonib.Domain.Entities.Product
+@{
+    ViewData["Title"] = "Nuevo producto";
+}
+<h2>Nuevo producto</h2>
+
+<form asp-action="Create" method="post">
+    <div class="mb-2">
+        <label class="form-label">Nombre</label>
+        <input asp-for="Name" class="form-control" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
+    <div class="mb-2">
+        <label class="form-label">Slug</label>
+        <input asp-for="Slug" class="form-control" />
+    </div>
+    <div class="mb-2">
+        <label class="form-label">Categoría</label>
+        <select asp-for="CategoryId" asp-items="ViewBag.Categories" class="form-select"></select>
+    </div>
+    <div class="mb-2">
+        <label class="form-label">Descripción</label>
+        <textarea asp-for="Description" class="form-control"></textarea>
+    </div>
+    <div class="row">
+        <div class="col-md-4 mb-2">
+            <label class="form-label">Precio</label>
+            <input asp-for="Price" class="form-control" />
+        </div>
+        <div class="col-md-4 mb-2">
+            <label class="form-label">Stock</label>
+            <input asp-for="Stock" class="form-control" />
+        </div>
+        <div class="col-md-4 mb-2">
+            <label class="form-label">Activo</label>
+            <input asp-for="IsActive" class="form-check-input" type="checkbox" />
+        </div>
+    </div>
+    <div class="mb-2">
+        <label class="form-label">Imagen (URL)</label>
+        <input asp-for="ImageUrl" class="form-control" />
+    </div>
+    <div class="mb-2">
+        <label class="form-label">Tags (coma ,)</label>
+        <input asp-for="Tags" class="form-control" />
+    </div>
+    <button class="btn btn-primary">Guardar</button>
+    <a asp-action="Index" class="btn btn-secondary">Volver</a>
+</form>
