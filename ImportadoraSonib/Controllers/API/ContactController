@@ -1,0 +1,21 @@
+using ImportadoraSonib.Data;
+using ImportadoraSonib.Domain.Entities;
+using Microsoft.AspNetCore.Mvc;
+
+namespace ImportadoraSonib.Controllers.Api;
+
+[ApiController]
+[Route("api/[controller]")]
+public class ContactController : ControllerBase
+{
+    private readonly ApplicationDbContext _db;
+    public ContactController(ApplicationDbContext db) => _db = db;
+
+    [HttpPost]
+    public async Task<IActionResult> Post(ContactMessage msg)
+    {
+        _db.ContactMessages.Add(msg);
+        await _db.SaveChangesAsync();
+        return Ok(new { ok = true });
+    }
+}

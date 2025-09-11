@@ -1,29 +1,71 @@
-﻿using ImportadoraSonib.Data;
+﻿using System.Text;
+using ImportadoraSonib.Data;
 using ImportadoraSonib.Infrastructure.Seeds;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// MVC
-builder.Services.AddControllersWithViews();
+// Swagger
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 
-// DB (SQL Server)
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+// Controllers (sin vistas)
+builder.Services.AddControllers().AddJsonOptions(o =>
+{
+    o.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+});
 
-// Identity + Roles (necesario para que el seeder cree el rol Admin)
-builder.Services
-    .AddDefaultIdentity<IdentityUser>(options =>
+// DB
+builder.Services.AddDbContext<ApplicationDbContext>(opt =>
+    opt.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// Identity + Roles + JWT (API)
+builder.Services.AddIdentity<IdentityUser, IdentityRole>(opt =>
+{
+    opt.SignIn.RequireConfirmedAccount = false;
+})
+.AddEntityFrameworkStores<ApplicationDbContext>()
+.AddDefaultTokenProviders();
+
+// JWT
+var jwtKey = builder.Configuration["Jwt:Key"]!;
+var jwtIssuer = builder.Configuration["Jwt:Issuer"]!;
+var jwtSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.RequireHttpsMetadata = true;
+    options.SaveToken = true;
+    options.TokenValidationParameters = new TokenValidationParameters
     {
-        options.SignIn.RequireConfirmedAccount = false;
-        // Opcional: políticas de password
-        // options.Password.RequireNonAlphanumeric = false;
-    })
-    .AddRoles<IdentityRole>()                           // ← IMPORTANTE
-    .AddEntityFrameworkStores<ApplicationDbContext>();
+        ValidateIssuer = true,
+        ValidIssuer = jwtIssuer,
+        ValidateAudience = false,
+        IssuerSigningKey = jwtSigningKey,
+        ValidateIssuerSigningKey = true,
+        ValidateLifetime = true
+    };
+});
 
-// Sesión
+// CORS para Angular en local
+builder.Services.AddCors(opt =>
+{
+    opt.AddPolicy("ng",
+        p => p.WithOrigins("http://localhost:4200")
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials());
+});
+
+// Session (solo para demostrar lastCategory si quieres)
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(o =>
 {
@@ -32,44 +74,33 @@ builder.Services.AddSession(o =>
     o.Cookie.HttpOnly = true;
     o.Cookie.SameSite = SameSiteMode.Lax;
 });
-
-// Para leer sesión en vistas con @inject IHttpContextAccessor
 builder.Services.AddHttpContextAccessor();
+
+// Servicios propios
+builder.Services.AddScoped<ImportadoraSonib.Services.CartService>();
 
 var app = builder.Build();
 
-// Migración + seed al arrancar
+// Migración + seed
 using (var scope = app.Services.CreateScope())
 {
     var sp = scope.ServiceProvider;
     var db = sp.GetRequiredService<ApplicationDbContext>();
     db.Database.Migrate();
-    await DbSeeder.SeedAsync(db, sp); // pasa ServiceProvider para crear rol/usuario
+    await DbSeeder.SeedAsync(db, sp);
 }
 
-if (!app.Environment.IsDevelopment())
-{
-    app.UseExceptionHandler("/Home/Error");
-    app.UseHsts();
-}
+app.UseSwagger();
+app.UseSwaggerUI();
 
+// Middlewares
 app.UseHttpsRedirection();
-app.UseStaticFiles();
-
-app.UseRouting();
+app.UseCors("ng");
+app.UseSession();
 
 app.UseAuthentication();
 app.UseAuthorization();
-app.UseSession();
 
-// Rutas: área Admin y sitio público
-app.MapControllerRoute(
-    name: "areas",
-    pattern: "{area:exists}/{controller=Home}/{action=Index}/{id?}");
+app.MapControllers(); // ← Solo API
 
-app.MapControllerRoute(
-    name: "default",
-    pattern: "{controller=Catalog}/{action=Index}/{id?}");
-
-app.MapRazorPages(); // Requerido si usas la UI de Identity
 app.Run();
