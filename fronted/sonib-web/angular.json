@@ -17,8 +17,8 @@
         "build": {
           "builder": "@angular/build:application",
           "options": {
-          "browser": "src/main.ts",
-          "polyfills": [
+            "browser": "src/main.ts",
+            "polyfills": [
               "zone.js"
             ],
             "tsConfig": "tsconfig.app.json",
@@ -64,7 +64,8 @@
               "buildTarget": "sonib-web:build:production"
             },
             "development": {
-              "buildTarget": "sonib-web:build:development"
+              "buildTarget": "sonib-web:build:development",
+              "proxyConfig": "proxy.conf.json"
             }
           },
           "defaultConfiguration": "development"
@@ -94,5 +95,8 @@
         }
       }
     }
+  },
+  "cli": {
+    "analytics": "e15548f7-e807-4d19-b1c8-e3dd7862a8a5"
   }
 }
