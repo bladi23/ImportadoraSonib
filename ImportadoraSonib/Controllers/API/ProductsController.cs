@@ -1,6 +1,9 @@
 ﻿using ImportadoraSonib.Data;
+using ImportadoraSonib.DTOs;
+using ImportadoraSonib.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace ImportadoraSonib.Controllers.Api;
 
@@ -9,15 +12,27 @@ namespace ImportadoraSonib.Controllers.Api;
 public class ProductsController : ControllerBase
 {
     private readonly ApplicationDbContext _db;
-    public ProductsController(ApplicationDbContext db) => _db = db;
+    private readonly IMemoryCache _cache;
+    private readonly CatalogCacheStamp _stamp;
 
-    // GET /api/products?category=tecnologia&page=1&pageSize=24&search=...
-    [HttpGet]
-    public async Task<IActionResult> Get([FromQuery] string? category, [FromQuery] int page = 1, [FromQuery] int pageSize = 24, [FromQuery] string? search = null)
+    public ProductsController(ApplicationDbContext db, IMemoryCache cache, CatalogCacheStamp stamp)
     {
+        _db = db; _cache = cache; _stamp = stamp;
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Get([FromQuery] string? category, [FromQuery] int page = 1,
+                                         [FromQuery] int pageSize = 24, [FromQuery] string? search = null)
+    {
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 100);
         HttpContext.Session.SetString("lastCategory", category ?? "");
 
-        var q = _db.Products.Include(p => p.Category).AsQueryable();
+        var key = $"products:{category}:{page}:{pageSize}:{search}:{_stamp.Value}";
+        if (_cache.TryGetValue(key, out object? cached) && cached is not null)
+            return Ok(cached);
+
+        var q = _db.Products.AsNoTracking().Include(p => p.Category).AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(category))
             q = q.Where(p => p.Category!.Slug == category);
@@ -29,36 +44,51 @@ public class ProductsController : ControllerBase
         var items = await q.OrderByDescending(p => p.CreatedAt)
                            .Skip((page - 1) * pageSize)
                            .Take(pageSize)
-                           .Select(p => new {
-                               p.Id, p.Name, p.Slug, p.Price, p.ImageUrl, p.Stock,
-                               Category = p.Category!.Name
-                           })
+                           .Select(p => new ProductListItemDto(
+                               p.Id, p.Name, p.Slug, p.Price, p.ImageUrl, p.Stock, p.Category!.Name))
                            .ToListAsync();
 
-        return Ok(new { total, items });
+        var payload = new { total, page, pageSize, items };
+
+        _cache.Set(key, payload, new MemoryCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(60)
+        });
+
+        return Ok(payload);
     }
 
-    // GET /api/products/by-slug/{slug}
     [HttpGet("by-slug/{slug}")]
     public async Task<IActionResult> GetBySlug(string slug)
     {
-        var p = await _db.Products.Include(x => x.Category).FirstOrDefaultAsync(x => x.Slug == slug);
+        var key = $"product:slug:{slug}:{_stamp.Value}";
+        if (_cache.TryGetValue(key, out object? cached) && cached is not null)
+            return Ok(cached);
+
+        var p = await _db.Products.AsNoTracking().Include(x => x.Category)
+                                  .FirstOrDefaultAsync(x => x.Slug == slug);
         if (p is null) return NotFound();
-        return Ok(new {
-            p.Id, p.Name, p.Slug, p.Description, p.Price, p.ImageUrl, p.Stock,
-            Category = p.Category!.Name, p.CategoryId
-        });
+        var dto = new ProductDetailDto(
+            p.Id, p.Name, p.Slug, p.Description, p.Price, p.ImageUrl, p.Stock, p.CategoryId, p.Category!.Name);
+
+        _cache.Set(key, dto, TimeSpan.FromSeconds(60));
+        return Ok(dto);
     }
 
-    // GET /api/products/{id}
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id)
     {
-        var p = await _db.Products.Include(x => x.Category).FirstOrDefaultAsync(x => x.Id == id);
+        var key = $"product:id:{id}:{_stamp.Value}";
+        if (_cache.TryGetValue(key, out object? cached) && cached is not null)
+            return Ok(cached);
+
+        var p = await _db.Products.AsNoTracking().Include(x => x.Category)
+                                  .FirstOrDefaultAsync(x => x.Id == id);
         if (p is null) return NotFound();
-        return Ok(new {
-            p.Id, p.Name, p.Slug, p.Description, p.Price, p.ImageUrl, p.Stock,
-            Category = p.Category!.Name, p.CategoryId
-        });
+        var dto = new ProductDetailDto(
+            p.Id, p.Name, p.Slug, p.Description, p.Price, p.ImageUrl, p.Stock, p.CategoryId, p.Category!.Name);
+
+        _cache.Set(key, dto, TimeSpan.FromSeconds(60));
+        return Ok(dto);
     }
 }

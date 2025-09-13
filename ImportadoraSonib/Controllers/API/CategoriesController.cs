@@ -1,8 +1,9 @@
 using ImportadoraSonib.Data;
 using ImportadoraSonib.DTOs;
-using Microsoft.AspNetCore.Authorization;
+using ImportadoraSonib.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace ImportadoraSonib.Controllers.Api;
 
@@ -11,23 +12,27 @@ namespace ImportadoraSonib.Controllers.Api;
 public class CategoriesController : ControllerBase
 {
     private readonly ApplicationDbContext _db;
-    public CategoriesController(ApplicationDbContext db) => _db = db;
+    private readonly IMemoryCache _cache;
+    private readonly CatalogCacheStamp _stamp;
+
+    public CategoriesController(ApplicationDbContext db, IMemoryCache cache, CatalogCacheStamp stamp)
+    {
+        _db = db; _cache = cache; _stamp = stamp;
+    }
 
     [HttpGet]
-    public async Task<IActionResult> Get() =>
-        Ok(await _db.Categories.Where(c=>c.IsActive)
-            .Select(c => new CategoryDto(c.Id, c.Name, c.Slug))
-            .ToListAsync());
-
-    [Authorize(Roles="Admin")]
-    [HttpPost]
-    public async Task<IActionResult> Create(CategoryCreateDto dto)
+    public async Task<IActionResult> Get()
     {
-        var exists = await _db.Categories.AnyAsync(c => c.Slug == dto.Slug);
-        if (exists) return Conflict("Slug ya existe.");
-        var c = new Domain.Entities.Category { Name=dto.Name, Slug=dto.Slug, IsActive=dto.IsActive };
-        _db.Categories.Add(c);
-        await _db.SaveChangesAsync();
-        return CreatedAtAction(nameof(Get), new { id = c.Id }, new CategoryDto(c.Id, c.Name, c.Slug));
+        var key = $"categories:list:{_stamp.Value}";
+        if (_cache.TryGetValue(key, out object? cached) && cached is not null)
+            return Ok(cached);
+
+        var data = await _db.Categories.AsNoTracking()
+            .Where(c => c.IsActive)
+            .Select(c => new CategoryDto(c.Id, c.Name, c.Slug))
+            .ToListAsync();
+
+        _cache.Set(key, data, TimeSpan.FromSeconds(60));
+        return Ok(data);
     }
 }

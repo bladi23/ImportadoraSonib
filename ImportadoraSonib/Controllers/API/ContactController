@@ -1,5 +1,5 @@
 using ImportadoraSonib.Data;
-using ImportadoraSonib.Domain.Entities;
+using ImportadoraSonib.DTOs;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ImportadoraSonib.Controllers.Api;
@@ -12,10 +12,11 @@ public class ContactController : ControllerBase
     public ContactController(ApplicationDbContext db) => _db = db;
 
     [HttpPost]
-    public async Task<IActionResult> Post(ContactMessage msg)
+    public async Task<IActionResult> Post([FromBody] ContactDto dto)
     {
+        var msg = new Domain.Entities.ContactMessage { Name = dto.Name, Email = dto.Email, Message = dto.Message };
         _db.ContactMessages.Add(msg);
         await _db.SaveChangesAsync();
-        return Ok(new { ok = true });
+        return Created($"/api/contact/{msg.Id}", new { ok = true, id = msg.Id });
     }
 }

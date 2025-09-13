@@ -1,18 +1,35 @@
 ﻿using System.Text;
 using ImportadoraSonib.Data;
 using ImportadoraSonib.Infrastructure.Seeds;
+using ImportadoraSonib.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Swagger
+// Swagger + Bearer
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "ImportadoraSonib API", Version = "v1" });
+    var scheme = new OpenApiSecurityScheme
+    {
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Description = "Pega tu token JWT (con o sin 'Bearer ').",
+        Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
+    };
+    c.AddSecurityDefinition("Bearer", scheme);
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement { { scheme, Array.Empty<string>() } });
+});
 
-// Controllers (sin vistas)
+// Controllers
 builder.Services.AddControllers().AddJsonOptions(o =>
 {
     o.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
@@ -22,16 +39,20 @@ builder.Services.AddControllers().AddJsonOptions(o =>
 builder.Services.AddDbContext<ApplicationDbContext>(opt =>
     opt.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Identity + Roles + JWT (API)
+// Identity + opciones
 builder.Services.AddIdentity<IdentityUser, IdentityRole>(opt =>
 {
     opt.SignIn.RequireConfirmedAccount = false;
+    opt.User.RequireUniqueEmail = true;
+    opt.Password.RequiredLength = 8;
+    opt.Lockout.MaxFailedAccessAttempts = 5;
 })
 .AddEntityFrameworkStores<ApplicationDbContext>()
 .AddDefaultTokenProviders();
 
 // JWT
-var jwtKey = builder.Configuration["Jwt:Key"]!;
+var jwtKey = builder.Configuration["Jwt:Key"];
+if (string.IsNullOrWhiteSpace(jwtKey)) throw new InvalidOperationException("Falta Jwt:Key en configuración");
 var jwtIssuer = builder.Configuration["Jwt:Issuer"]!;
 var jwtSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
 
@@ -42,7 +63,7 @@ builder.Services.AddAuthentication(options =>
 })
 .AddJwtBearer(options =>
 {
-    options.RequireHttpsMetadata = true;
+    options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
     options.SaveToken = true;
     options.TokenValidationParameters = new TokenValidationParameters
     {
@@ -51,21 +72,25 @@ builder.Services.AddAuthentication(options =>
         ValidateAudience = false,
         IssuerSigningKey = jwtSigningKey,
         ValidateIssuerSigningKey = true,
-        ValidateLifetime = true
+        ValidateLifetime = true,
+        ClockSkew = TimeSpan.FromSeconds(30),
+        NameClaimType = System.Security.Claims.ClaimTypes.NameIdentifier,
+        RoleClaimType = System.Security.Claims.ClaimTypes.Role
+
     };
 });
 
-// CORS para Angular en local
+// CORS
 builder.Services.AddCors(opt =>
 {
-    opt.AddPolicy("ng",
-        p => p.WithOrigins("http://localhost:4200")
-              .AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowCredentials());
+    opt.AddPolicy("ng", p => p
+        .WithOrigins("http://localhost:4200")
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+        .AllowCredentials());
 });
 
-// Session (solo para demostrar lastCategory si quieres)
+// Session (demo)
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(o =>
 {
@@ -76,8 +101,13 @@ builder.Services.AddSession(o =>
 });
 builder.Services.AddHttpContextAccessor();
 
+// ---- CACHÉ en memoria + estampilla para invalidar catálogo ----
+builder.Services.AddMemoryCache();
+builder.Services.AddSingleton<CatalogCacheStamp>();
+
 // Servicios propios
-builder.Services.AddScoped<ImportadoraSonib.Services.CartService>();
+builder.Services.AddScoped<CartService>();
+builder.Services.AddSingleton<WhatsappLinkService>();
 
 var app = builder.Build();
 
@@ -87,20 +117,22 @@ using (var scope = app.Services.CreateScope())
     var sp = scope.ServiceProvider;
     var db = sp.GetRequiredService<ApplicationDbContext>();
     db.Database.Migrate();
-    await DbSeeder.SeedAsync(db, sp);
+    await DbSeeder.SeedAsync(db, sp, app.Configuration);
 }
 
-app.UseSwagger();
-app.UseSwaggerUI();
+// Swagger (Dev)
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 
-// Middlewares
 app.UseHttpsRedirection();
 app.UseCors("ng");
 app.UseSession();
 
-app.UseAuthentication();
-app.UseAuthorization();
+app.UseAuthentication();   // <-- antes
+app.UseAuthorization();    // <-- después
 
-app.MapControllers(); // ← Solo API
-
+app.MapControllers();
 app.Run();

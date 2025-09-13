@@ -1,47 +1,54 @@
-﻿using ImportadoraSonib.Domain.Entities;
-using ImportadoraSonib.Data;
+﻿using ImportadoraSonib.Data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 
 namespace ImportadoraSonib.Infrastructure.Seeds;
 
 public static class DbSeeder
 {
-    public static async Task SeedAsync(ApplicationDbContext db, IServiceProvider? sp = null)
+    public static async Task SeedAsync(ApplicationDbContext db, IServiceProvider sp, IConfiguration cfg)
     {
+        await db.Database.EnsureCreatedAsync();
+
+        var roleMgr = sp.GetRequiredService<RoleManager<IdentityRole>>();
+        var userMgr = sp.GetRequiredService<UserManager<IdentityUser>>();
+
+        var roles = new[] { "Admin", "Customer" }; // solo estos dos
+        foreach (var r in roles)
+            if (!await roleMgr.RoleExistsAsync(r))
+                await roleMgr.CreateAsync(new IdentityRole(r));
+
+        var adminEmail = cfg["Admin:Email"] ?? "admin@sonib.com";
+var adminPass  = cfg["Admin:Password"] ?? "Admin#12345";
+
+var admin = await userMgr.FindByEmailAsync(adminEmail);
+if (admin == null)
+{
+    admin = new IdentityUser { UserName = adminEmail, Email = adminEmail, EmailConfirmed = true };
+    var created = await userMgr.CreateAsync(admin, adminPass);
+    if (created.Succeeded) await userMgr.AddToRoleAsync(admin, "Admin");
+}
+else
+{
+    var token = await userMgr.GeneratePasswordResetTokenAsync(admin);
+    await userMgr.ResetPasswordAsync(admin, token, adminPass);
+    if (!await userMgr.IsInRoleAsync(admin, "Admin"))
+        await userMgr.AddToRoleAsync(admin, "Admin");
+    if (!admin.EmailConfirmed)
+    {
+        admin.EmailConfirmed = true;
+        await userMgr.UpdateAsync(admin);
+    }
+}
+
+
+        // Opcional: datos mínimos de demo si la tabla está vacía
         if (!await db.Categories.AnyAsync())
         {
-            var cats = new[] {
-                new Category{ Name="Tecnología", Slug="tecnologia"},
-                new Category{ Name="Electrodomésticos", Slug="electrodomesticos"},
-                new Category{ Name="Motos eléctricas", Slug="motos-electricas"}
-            };
-            db.Categories.AddRange(cats);
-            await db.SaveChangesAsync();
-
-            db.Products.AddRange(
-                new Product { CategoryId = cats[0].Id, Name = "Smartphone X", Slug = "smartphone-x", Price = 299, Stock = 10, ImageUrl = "/uploads/smartphone.jpg", Tags = "android,5g,128gb" },
-                new Product { CategoryId = cats[1].Id, Name = "Licuadora Pro", Slug = "licuadora-pro", Price = 49, Stock = 25, ImageUrl = "/uploads/licuadora.jpg", Tags = "cocina,potente" },
-                new Product { CategoryId = cats[2].Id, Name = "Moto E-2000", Slug = "moto-e-2000", Price = 1200, Stock = 3, ImageUrl = "/uploads/moto.jpg", Tags = "moto,eco,electrica" }
-            );
-            await db.SaveChangesAsync();
+            db.Categories.Add(new Domain.Entities.Category { Name = "Tecnología", Slug = "tecnologia" });
+            db.Categories.Add(new Domain.Entities.Category { Name = "Hogar", Slug = "hogar" });
         }
-
-        // Admin por defecto 
-        if (sp != null)
-        {
-            var roleMgr = sp.GetRequiredService<RoleManager<IdentityRole>>();
-            var userMgr = sp.GetRequiredService<UserManager<IdentityUser>>();
-            if (!await roleMgr.RoleExistsAsync("Admin"))
-                await roleMgr.CreateAsync(new IdentityRole("Admin"));
-
-            var admin = await userMgr.FindByEmailAsync("admin@sonib.com");
-            if (admin == null)
-            {
-                admin = new IdentityUser { UserName = "admin@sonib.com", Email = "admin@sonib.com", EmailConfirmed = true };
-                await userMgr.CreateAsync(admin, "Admin#12345");
-                await userMgr.AddToRoleAsync(admin, "Admin");
-            }
-        }
+        await db.SaveChangesAsync();
     }
 }

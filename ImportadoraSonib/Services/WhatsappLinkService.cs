@@ -1,23 +1,27 @@
-﻿namespace ImportadoraSonib.Services;
+﻿using System.Text;
+using Microsoft.Extensions.Configuration;
 
-public static class WhatsappLinkService
+namespace ImportadoraSonib.Services;
+
+public class WhatsappLinkService
 {
-    private const string PhoneNumber = "593992856725"; // EC
+    private readonly string _phone;
 
-    public static string BuildLink(string productName, int productId, decimal price)
+    public WhatsappLinkService(IConfiguration cfg)
     {
-        var msg = Uri.EscapeDataString($"Hola, quiero comprar: {productName} (ID {productId}) a USD {price:F2}");
-        return $"https://wa.me/{PhoneNumber}?text={msg}";
+        _phone = cfg["Business:WhatsAppNumber"] ?? "";
     }
 
-    public static string BuildOrderLink(int orderId, IEnumerable<(string Name,int Qty, decimal Price)> lines, decimal total)
+    public string BuildOrderLink(
+        int orderId,
+        IEnumerable<(string Name, int Quantity, decimal UnitPrice)> lines,
+        decimal total)
     {
-        var sb = new System.Text.StringBuilder();
-        sb.AppendLine($"Hola, quiero confirmar la orden #{orderId}:");
+        var sb = new StringBuilder();
+        sb.Append($"Hola, quiero finalizar la compra del pedido #{orderId}%0A");
         foreach (var l in lines)
-            sb.AppendLine($"- {l.Name} x{l.Qty} @ {l.Price:F2}");
-        sb.AppendLine($"Total: USD {total:F2}");
-        var msg = Uri.EscapeDataString(sb.ToString());
-        return $"https://wa.me/{PhoneNumber}?text={msg}";
+            sb.Append($"- {l.Name} x{l.Quantity} = {(l.UnitPrice * l.Quantity):0.00}%0A");
+        sb.Append($"Total: {total:0.00}");
+        return $"https://wa.me/{_phone}?text={sb}";
     }
 }
