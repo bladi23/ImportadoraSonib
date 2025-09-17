@@ -1,29 +1,16 @@
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-  <div class="container">
-    <a class="navbar-brand fw-bold" routerLink="/">Importadora Sonib</a>
+<header class="hdr">
+  <div class="brand" routerLink="/">SONIB</div>
+  <nav>
+    <a routerLink="/catalog">Catálogo</a>
+    <a routerLink="/cart">Carrito</a>
 
-   <button
-  class="navbar-toggler"
-  type="button"
-  data-bs-toggle="collapse"
-  data-bs-target="#navbarNav"
-  aria-controls="navbarNav"
-  aria-expanded="false"
-  aria-label="Abrir menú de navegación"
-  title="Abrir menú de navegación">
-  <span class="navbar-toggler-icon" aria-hidden="true"></span>
-</button>
+    <ng-container *ngIf="(user$|async) as u; else loginLink">
+      <span class="email">{{u.email}}</span>
+      <button (click)="logout()">Salir</button>
+    </ng-container>
 
-
-    <div class="collapse navbar-collapse" id="navbarNav">
-      <ul class="navbar-nav me-auto">
-        <li class="nav-item"><a class="nav-link" routerLink="/catalog" routerLinkActive="active">Catálogo</a></li>
-        <li class="nav-item"><a class="nav-link" routerLink="/cart" routerLinkActive="active">Carrito</a></li>
-        <li class="nav-item"><a class="nav-link" routerLink="/contact" routerLinkActive="active">Contacto</a></li>
-      </ul>
-      <ul class="navbar-nav">
-        <li class="nav-item"><a class="nav-link" routerLink="/auth/login">Login</a></li>
-      </ul>
-    </div>
-  </div>
-</nav>
+    <ng-template #loginLink>
+      <a routerLink="/login">Ingresar</a>
+    </ng-template>
+  </nav>
+</header>

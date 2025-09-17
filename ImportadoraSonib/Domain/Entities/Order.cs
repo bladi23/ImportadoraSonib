@@ -15,6 +15,10 @@ public class Order
 
     [MaxLength(32)]
     public string Status { get; set; } = "Pendiente"; // Pendiente | Confirmado | Cancelado
+    public string? PaymentProvider { get; set; }     // demo | payphone | kushki | ...
+    public string? PaymentExternalId { get; set; }   // id que devuelve el proveedor o DEMO
+    public string? CheckoutSessionId { get; set; }   // id de la sesión de pago
+    public DateTime? PaidAt { get; set; }            // fecha de pago
 
     public ICollection<OrderDetail> Items { get; set; } = new List<OrderDetail>();
 }
