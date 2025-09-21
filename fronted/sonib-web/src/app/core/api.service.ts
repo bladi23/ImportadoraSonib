@@ -27,4 +27,5 @@ export class ApiService {
     if (options.search) params = params.set('search', options.search);
     return this.http.get<Paged<ProductListItem>>(`${this.base}/products`, { params });
   }
+ 
 }

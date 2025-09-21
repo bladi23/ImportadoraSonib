@@ -1,0 +1,13 @@
+<div class="wrap">
+  <h2>Demo Checkout</h2>
+  <p>Orden #{{orderId}} — Total: <b>{{amount}}</b></p>
+
+  <div class="row">
+    <button (click)="confirm('approved')"  [disabled]="loading">Aprobar</button>
+    <button (click)="confirm('declined')"  [disabled]="loading">Rechazar</button>
+    <button (click)="confirm('canceled')"  [disabled]="loading">Cancelar</button>
+  </div>
+
+  <p *ngIf="loading">Procesando...</p>
+  <p class="msg" *ngIf="msg">{{msg}}</p>
+</div>

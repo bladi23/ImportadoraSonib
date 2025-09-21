@@ -4,10 +4,12 @@
     <a routerLink="/catalog">Catálogo</a>
     <a routerLink="/cart">Carrito</a>
 
-    <ng-container *ngIf="(user$|async) as u; else loginLink">
-      <span class="email">{{u.email}}</span>
-      <button (click)="logout()">Salir</button>
-    </ng-container>
+   <ng-container *ngIf="(user$|async) as u; else loginLink">
+  <a *ngIf="u.roles?.includes('Admin')" routerLink="/admin/categories">Admin</a>
+  <span class="email">{{u.email}}</span>
+  <button (click)="logout()">Salir</button>
+</ng-container>
+
 
     <ng-template #loginLink>
       <a routerLink="/login">Ingresar</a>
