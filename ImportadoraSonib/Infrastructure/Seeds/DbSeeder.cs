@@ -41,9 +41,7 @@ else
         await userMgr.UpdateAsync(admin);
     }
 }
-
-
-        // Opcional: datos mínimos de demo si la tabla está vacía
+        //  datos mínimos de demo si la tabla está vacía
         if (!await db.Categories.AnyAsync())
         {
             db.Categories.Add(new Domain.Entities.Category { Name = "Tecnología", Slug = "tecnologia" });

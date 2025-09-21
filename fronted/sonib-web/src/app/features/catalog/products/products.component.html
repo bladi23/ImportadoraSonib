@@ -21,7 +21,9 @@
           <p class="cat">{{p.category}}</p>
           <div class="price">$ {{p.price | number:'1.2-2'}}</div>
         </div>
-        <button>Añadir al carrito</button>
+        
+        <button (click)="addToCart(p)">Añadir al carrito</button>
+
       </div>
     </div>
 

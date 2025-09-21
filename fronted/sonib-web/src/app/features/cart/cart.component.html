@@ -1,0 +1,40 @@
+<section class="cart">
+  <h2>Tu carrito</h2>
+
+  <div *ngIf="loading">Cargando...</div>
+  <p class="msg" *ngIf="msg">{{msg}}</p>
+
+  <div *ngIf="!loading && !items.length" class="empty">Todavía no tienes productos en el carrito.</div>
+
+  <table *ngIf="!loading && items.length">
+    <thead>
+      <tr>
+        <th>Producto</th>
+        <th class="num">Cant.</th>
+        <th class="num">Precio</th>
+        <th class="num">Subtotal</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let it of items">
+        <td>{{it.productName}}</td>
+        <td class="num">{{it.quantity}}</td>
+        <td class="num">$ {{it.unitPrice | number:'1.2-2'}}</td>
+        <td class="num">$ {{it.subtotal | number:'1.2-2'}}</td>
+        <td><button (click)="remove(it)">Quitar</button></td>
+      </tr>
+    </tbody>
+    <tfoot>
+      <tr>
+        <td colspan="3" class="num"><b>Total</b></td>
+        <td class="num"><b>$ {{total | number:'1.2-2'}}</b></td>
+        <td></td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <div class="paybar" *ngIf="items.length">
+    <button (click)="pagarDemo()" [disabled]="paying">Pagar (DEMO)</button>
+  </div>
+</section>

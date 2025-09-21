@@ -97,8 +97,10 @@ builder.Services.AddSession(o =>
     o.Cookie.Name = ".Sonib.Session";
     o.IdleTimeout = TimeSpan.FromMinutes(20);
     o.Cookie.HttpOnly = true;
-    o.Cookie.SameSite = SameSiteMode.Lax;
+    o.Cookie.SameSite = SameSiteMode.None; // ← antes Lax
+    o.Cookie.SecurePolicy = CookieSecurePolicy.Always; // ← importante si usas https en la API
 });
+
 builder.Services.AddHttpContextAccessor();
 
 // ---- CACHÉ en memoria + estampilla para invalidar catálogo ----
@@ -119,6 +121,9 @@ using (var scope = app.Services.CreateScope())
     db.Database.Migrate();
     await DbSeeder.SeedAsync(db, sp, app.Configuration);
 }
+var www = Path.Combine(app.Environment.ContentRootPath, "wwwroot");
+var up = Path.Combine(www, "uploads", "products");
+Directory.CreateDirectory(up);
 
 // Swagger (Dev)
 if (app.Environment.IsDevelopment())
@@ -131,6 +136,7 @@ app.UseHttpsRedirection();
 app.UseCors("ng");
 app.UseSession();
 
+app.UseStaticFiles();
 app.UseAuthentication();   // <-- antes
 app.UseAuthorization();    // <-- después
 

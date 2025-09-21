@@ -36,4 +36,8 @@ export class AuthService {
     localStorage.removeItem('email');
     this._user$.next(null);
   }
+   isAdminSync(): boolean {
+  const u = (this as any)._user$?.getValue?.() as any;
+  return !!u?.roles?.includes('Admin');
+}
 }

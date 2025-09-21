@@ -1,9 +1,6 @@
-using System.ComponentModel.DataAnnotations;
-
-namespace ImportadoraSonib.DTOs;
-
-public record CategoryDto(int Id, string Name, string Slug);
-
-public record CategoryCreateDto([Required, MaxLength(100)] string Name,
-                                [Required, MaxLength(100)] string Slug,
-                                bool IsActive = true);
+namespace ImportadoraSonib.DTOs
+{
+    public record CategoryDto(int Id, string Name, string Slug, bool IsActive = true);
+    public record CategoryCreateDto(string Name, string Slug, bool IsActive = true);
+    public record CategoryUpdateDto(string Name, string Slug, bool IsActive = true);
+}
