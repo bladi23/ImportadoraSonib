@@ -1,41 +1,16 @@
-<section class="admin">
-  <h2>Admin · Categorías</h2>
+<form [formGroup]="form" (ngSubmit)="save()">
+  <label>Nombre</label>
+  <input formControlName="name" placeholder="Ej. Tecnología"/>
 
-  <div *ngIf="loading">Cargando...</div>
-  <p class="err" *ngIf="error">{{error}}</p>
+  <label>Slug</label>
+  <input formControlName="slug" placeholder="tecnologia"/>
 
-  <div class="grid">
-    <div class="panel">
-      <h3>{{ editing ? 'Editar' : 'Nueva' }} categoría</h3>
-      <form [formGroup]="form" (ngSubmit)="save()">
-        <label >Nombre</label>
-        
-        <label>Slug</label>
-        <label class="chk"><input type="checkbox" formControlName="isActive" /> Activa</label>
+  <label class="chk">
+    <input type="checkbox" formControlName="isActive"> Activa
+  </label>
 
-        <div class="row">
-          <button type="submit">{{ editing ? 'Guardar cambios' : 'Crear' }}</button>
-          <button type="button" (click)="startCreate()">Limpiar</button>
-        </div>
-      </form>
-    </div>
-
-    <div class="panel">
-      <h3>Lista</h3>
-      <table>
-        <thead><tr><th>Nombre</th><th>Slug</th><th>Activa</th><th></th></tr></thead>
-        <tbody>
-          <tr *ngFor="let c of categories">
-            <td>{{c.name}}</td>
-            <td>{{c.slug}}</td>
-            <td>{{c.isActive ? 'Sí' : 'No'}}</td>
-            <td class="actions">
-              <button (click)="startEdit(c)">Editar</button>
-              <button (click)="remove(c)">Eliminar</button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+  <div class="row">
+    <button type="submit">{{ editing ? 'Guardar cambios' : 'Crear' }}</button>
+    <button type="button" (click)="new()">Limpiar</button>
   </div>
-</section>
+</form>

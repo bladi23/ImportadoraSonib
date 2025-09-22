@@ -35,7 +35,10 @@ export class AdminCategoriesComponent implements OnInit {
       error: () => { this.loading = false; this.error = 'No se pudo cargar categorías.'; }
     });
   }
-
+   new() {
+    this.editing = null;
+    this.form.reset({ name: '', slug: '', isActive: true });
+  }
   startCreate() {
     this.editing = null;
     this.form.reset({ name: '', slug: '', isActive: true });

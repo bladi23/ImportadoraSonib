@@ -3,18 +3,26 @@ using ImportadoraSonib.Data;
 using ImportadoraSonib.Infrastructure.Seeds;
 using ImportadoraSonib.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Microsoft.Net.Http.Headers;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Swagger + Bearer
+// ───────────────── Swagger + JWT (Bearer) ─────────────────
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new OpenApiInfo { Title = "ImportadoraSonib API", Version = "v1" });
+    c.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "ImportadoraSonib API",
+        Version = "v1",
+        Description = "API de catálogo, carrito, órdenes y administración."
+    });
+
     var scheme = new OpenApiSecurityScheme
     {
         Scheme = "bearer",
@@ -22,24 +30,25 @@ builder.Services.AddSwaggerGen(c =>
         In = ParameterLocation.Header,
         Name = "Authorization",
         Type = SecuritySchemeType.Http,
-        Description = "Pega tu token JWT (con o sin 'Bearer ').",
+        Description = "Pega tu token JWT (con o sin el prefijo 'Bearer ').",
         Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
     };
     c.AddSecurityDefinition("Bearer", scheme);
     c.AddSecurityRequirement(new OpenApiSecurityRequirement { { scheme, Array.Empty<string>() } });
 });
 
-// Controllers
+// ───────────────── Controllers ─────────────────
 builder.Services.AddControllers().AddJsonOptions(o =>
 {
-    o.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+    o.JsonSerializerOptions.ReferenceHandler =
+        System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
 });
 
-// DB
+// ───────────────── DB ─────────────────
 builder.Services.AddDbContext<ApplicationDbContext>(opt =>
     opt.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Identity + opciones
+// ───────────────── Identity ─────────────────
 builder.Services.AddIdentity<IdentityUser, IdentityRole>(opt =>
 {
     opt.SignIn.RequireConfirmedAccount = false;
@@ -50,10 +59,12 @@ builder.Services.AddIdentity<IdentityUser, IdentityRole>(opt =>
 .AddEntityFrameworkStores<ApplicationDbContext>()
 .AddDefaultTokenProviders();
 
-// JWT
+// ───────────────── JWT ─────────────────
 var jwtKey = builder.Configuration["Jwt:Key"];
-if (string.IsNullOrWhiteSpace(jwtKey)) throw new InvalidOperationException("Falta Jwt:Key en configuración");
-var jwtIssuer = builder.Configuration["Jwt:Issuer"]!;
+if (string.IsNullOrWhiteSpace(jwtKey))
+    throw new InvalidOperationException("Falta Jwt:Key en appsettings.");
+
+var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "ImportadoraSonib";
 var jwtSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
 
 builder.Services.AddAuthentication(options =>
@@ -76,44 +87,52 @@ builder.Services.AddAuthentication(options =>
         ClockSkew = TimeSpan.FromSeconds(30),
         NameClaimType = System.Security.Claims.ClaimTypes.NameIdentifier,
         RoleClaimType = System.Security.Claims.ClaimTypes.Role
-
     };
 });
 
-// CORS
+// ───────────────── CORS (Angular dev) ─────────────────
+// Incluye http y https por si usas 'ng serve --ssl'
 builder.Services.AddCors(opt =>
 {
     opt.AddPolicy("ng", p => p
-        .WithOrigins("http://localhost:4200")
+        .WithOrigins("http://localhost:4200", "https://localhost:4200")
         .AllowAnyHeader()
         .AllowAnyMethod()
         .AllowCredentials());
 });
 
-// Session (demo)
+// ───────────────── Autorización (políticas opcionales) ─────────────────
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("AdminOnly", p => p.RequireRole("Admin"));
+    options.AddPolicy("CustomerOnly", p => p.RequireRole("Customer"));
+});
+
+// ───────────────── Session (para carrito por sesión) ─────────────────
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(o =>
 {
     o.Cookie.Name = ".Sonib.Session";
     o.IdleTimeout = TimeSpan.FromMinutes(20);
     o.Cookie.HttpOnly = true;
-    o.Cookie.SameSite = SameSiteMode.None; // ← antes Lax
-    o.Cookie.SecurePolicy = CookieSecurePolicy.Always; // ← importante si usas https en la API
+    o.Cookie.SameSite = Microsoft.AspNetCore.Http.SameSiteMode.None; 
+    o.Cookie.SecurePolicy = CookieSecurePolicy.Always;
 });
+
 
 builder.Services.AddHttpContextAccessor();
 
-// ---- CACHÉ en memoria + estampilla para invalidar catálogo ----
+// ───────────────── Cache + Estampilla de catálogo ─────────────────
 builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<CatalogCacheStamp>();
 
-// Servicios propios
+// ───────────────── Servicios propios ─────────────────
 builder.Services.AddScoped<CartService>();
 builder.Services.AddSingleton<WhatsappLinkService>();
 
 var app = builder.Build();
 
-// Migración + seed
+// ───────────────── Migración + Seed (roles, admin, datos mínimos) ─────────────────
 using (var scope = app.Services.CreateScope())
 {
     var sp = scope.ServiceProvider;
@@ -121,24 +140,56 @@ using (var scope = app.Services.CreateScope())
     db.Database.Migrate();
     await DbSeeder.SeedAsync(db, sp, app.Configuration);
 }
+
+// ───────────────── Archivos estáticos (uploads) ─────────────────
 var www = Path.Combine(app.Environment.ContentRootPath, "wwwroot");
 var up = Path.Combine(www, "uploads", "products");
 Directory.CreateDirectory(up);
 
-// Swagger (Dev)
-if (app.Environment.IsDevelopment())
+// ───────────────── Encabezados reenviados (si hay proxy/containers) ─────────────────
+app.UseForwardedHeaders(new ForwardedHeadersOptions
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+});
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    OnPrepareResponse = ctx =>
+    {
+        var path = ctx.File?.PhysicalPath; // 👈 evita warning CS8602
+        if (path != null && path.Contains(Path.Combine("wwwroot", "uploads", "products")))
+        {
+            var headers = ctx.Context.Response.GetTypedHeaders();
+            headers.CacheControl = new CacheControlHeaderValue
+            {
+                Public = true,
+                MaxAge = TimeSpan.FromDays(30)
+            };
+            // 'immutable' se agrega como extensión (no existe la propiedad Immutable)
+            headers.CacheControl.Extensions.Add(new NameValueHeaderValue("immutable"));
+        }
+    }
+});
+{
+    app.UseHsts();
 }
 
 app.UseHttpsRedirection();
+
+app.UseSwagger();
+app.UseSwaggerUI();
+
 app.UseCors("ng");
 app.UseSession();
 
 app.UseStaticFiles();
-app.UseAuthentication();   // <-- antes
-app.UseAuthorization();    // <-- después
+
+app.UseAuthentication();
+app.UseAuthorization();
+
+// (Opcional) redirige raíz a Swagger
+app.MapGet("/", () => Results.Redirect("/swagger"));
 
 app.MapControllers();
+
 app.Run();

@@ -2,7 +2,7 @@
 using ImportadoraSonib.Domain.Entities;
 using ImportadoraSonib.DTOs;
 using ImportadoraSonib.Services;
-using Microsoft.AspNetCore.Authorization; // 👈 IMPORTANTE para [Authorize]
+using Microsoft.AspNetCore.Authorization; // [Authorize]
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;

@@ -4,8 +4,9 @@
     <a routerLink="/catalog">Catálogo</a>
     <a routerLink="/cart">Carrito</a>
 
-   <ng-container *ngIf="(user$|async) as u; else loginLink">
-  <a *ngIf="u.roles?.includes('Admin')" routerLink="/admin/categories">Admin</a>
+<ng-container *ngIf="(user$|async) as u; else loginLink">
+  <a *ngIf="u.roles?.includes('Admin')" routerLink="/admin/categories">Admin · Categorías</a>
+  <a *ngIf="u.roles?.includes('Admin')" routerLink="/admin/products">Admin · Productos</a>
   <span class="email">{{u.email}}</span>
   <button (click)="logout()">Salir</button>
 </ng-container>

@@ -1,0 +1,17 @@
+.admin{max-width:1200px;margin:1rem auto;padding:0 1rem}
+.toolbar{display:flex;gap:.5rem;align-items:center;margin-bottom:.8rem}
+.grid{display:grid;grid-template-columns:420px 1fr;gap:1rem}
+.panel{border:1px solid #eee;border-radius:12px;padding:1rem;background:#fff}
+label{display:block;margin:.5rem 0 .25rem}
+input, textarea, select{width:100%;padding:.55rem;border:1px solid #ddd;border-radius:8px}
+textarea{min-height:80px}
+.row{display:flex;gap:.8rem}
+.chk{display:flex;gap:.4rem;align-items:center;margin-top:.4rem}
+table{width:100%;border-collapse:collapse}
+th,td{padding:.5rem;border-bottom:1px solid #eee}
+.num{text-align:right}
+.actions{display:flex;gap:.4rem}
+.preview{display:block;max-width:100%;height:auto;border:1px solid #eee;border-radius:8px;margin-top:.4rem}
+button{padding:.45rem .9rem;border:1px solid #ddd;border-radius:8px;background:#fff;cursor:pointer}
+.err{color:#c00}
+.pager{display:flex;gap:.6rem;align-items:center;justify-content:center;margin-top:.8rem}

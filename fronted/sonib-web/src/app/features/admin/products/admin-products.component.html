@@ -1,0 +1,93 @@
+<section class="admin">
+  <h2>Admin · Productos</h2>
+
+  <div class="toolbar">
+    <input placeholder="Buscar..." [(ngModel)]="search" (keyup.enter)="page=1; load()"/>
+    <button (click)="page=1; load()">Buscar</button>
+    <button (click)="new()">Nuevo</button>
+  </div>
+
+  <div *ngIf="loading">Cargando...</div>
+  <p class="err" *ngIf="error">{{error}}</p>
+
+  <div class="grid">
+    <div class="panel">
+      <h3>{{ editing ? 'Editar' : 'Nuevo' }} producto</h3>
+      <form [formGroup]="form" (ngSubmit)="save()">
+        <label>Nombre</label>
+        <input formControlName="name" placeholder="Ej. Audífonos XYZ"/>
+
+        <label>Slug</label>
+        <input formControlName="slug" placeholder="audifonos-xyz"/>
+
+        <label>Descripción</label>
+        <textarea formControlName="description" placeholder="Detalle del producto"></textarea>
+
+        <label>Tags (separados por coma)</label>
+        <input formControlName="tags" placeholder="audio,bluetooth,xyz"/>
+
+        <div class="row">
+          <div>
+            <label>Precio</label>
+            <input type="number" step="0.01" formControlName="price"/>
+          </div>
+          <div>
+            <label>Stock</label>
+            <input type="number" formControlName="stock"/>
+          </div>
+        </div>
+
+        <label>Categoría</label>
+        <select formControlName="categoryId">
+          <option [ngValue]="0" disabled>-- Selecciona --</option>
+          <option *ngFor="let c of categories" [ngValue]="c.id">{{c.name}}</option>
+        </select>
+
+        <label class="chk"><input type="checkbox" formControlName="isActive"> Activo</label>
+
+        <label>Imagen</label>
+        <input type="text" formControlName="imageUrl" placeholder="o pega una URL válida"/>
+        <input type="file" (change)="onFile($event)"/>
+        <img *ngIf="preview" [src]="preview" class="preview" alt="preview"/>
+
+        <div class="row">
+          <button type="submit">{{ editing ? 'Guardar cambios' : 'Crear' }}</button>
+          <button type="button" (click)="new()">Limpiar</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="panel">
+      <h3>Lista</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Nombre</th><th>Slug</th><th>Cat.</th><th class="num">Precio</th>
+            <th class="num">Stock</th><th>Activo</th><th>Borrado</th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let p of products">
+            <td>{{p.name}}</td>
+            <td>{{p.slug}}</td>
+            <td>{{p.category}}</td>
+            <td class="num">$ {{p.price | number:'1.2-2'}}</td>
+            <td class="num">{{p.stock}}</td>
+            <td>{{p.isActive ? 'Sí' : 'No'}}</td>
+            <td>{{p.isDeleted ? 'Sí' : 'No'}}</td>
+            <td class="actions">
+              <button (click)="edit(p)">Editar</button>
+              <button (click)="remove(p)">Eliminar</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="pager">
+        <button [disabled]="page===1" (click)="page=page-1; load()">Anterior</button>
+        <span>{{page}}</span>
+        <button [disabled]="(page*pageSize)>=total" (click)="page=page+1; load()">Siguiente</button>
+      </div>
+    </div>
+  </div>
+</section>
