@@ -1,0 +1,30 @@
+<div class="overlay" (click)="close.emit"></div>
+
+<div class="panel" role="dialog" aria-label="Ingreso">
+  <h3>Correo y contraseña</h3>
+
+  <form [formGroup]="form" (ngSubmit)="submit()">
+    <label>Correo</label>
+    <input type="email" formControlName="email" placeholder="ejemplo@mail.com" autocomplete="email" />
+
+    <label>Contraseña</label>
+    <div class="pw">
+      <input [type]="hide ? 'password' : 'text'" formControlName="password" placeholder="Ingrese su contraseña" autocomplete="current-password" />
+      <button type="button" class="eye" (click)="toggle()" aria-label="Mostrar/Ocultar">👁️</button>
+    </div>
+
+    <a routerLink="/auth/forgot" (click)="close.emit()" class="forgot">Olvidé mi contraseña</a>
+
+    <p class="err" *ngIf="error">{{ error }}</p>
+
+    <div class="actions">
+      <button type="button" class="link" (click)="close.emit">Volver</button>
+      <button type="submit" [disabled]="loading">{{ loading ? 'Ingresando…' : 'Entrar' }}</button>
+    </div>
+  </form>
+
+  <div class="alt">
+    ¿No tiene una cuenta?
+    <a routerLink="/register" (click)="close.emit()">Regístrese</a>
+  </div>
+</div>

@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../../../core/auth.service';
+import { finalize, switchMap } from 'rxjs/operators';
+import { of } from 'rxjs';
 
 @Component({
   selector: 'app-login',
@@ -21,26 +23,30 @@ export class LoginComponent {
 
   form = this.fb.group({
     email: ['', [Validators.required, Validators.email]],
-    password: ['', [Validators.required]]
+    password: ['', [Validators.required, Validators.minLength(6)]]
   });
 
   submit() {
-    this.error='';
+    this.error = '';
     if (this.form.invalid) return;
+
     const { email, password } = this.form.value as any;
     this.loading = true;
-    this.auth.login(email, password).subscribe({
-      next: (res) => {
-        localStorage.setItem('token', res.token);
-        localStorage.setItem('email', res.email);
-        this.auth.afterLogin();
-        this.loading=false;
-        this.router.navigate(['/']);
-      },
-      error: (err) => {
-        this.loading=false;
-        this.error = err?.error ?? 'Credenciales inválidas';
-      }
-    });
+
+    this.auth.login(email, password)
+   
+      .pipe(
+        switchMap(() => {
+        
+          return of(true);
+        }),
+        finalize(() => this.loading = false)
+      )
+      .subscribe({
+        next: () => this.router.navigate(['/']),
+        error: (err) => {
+          this.error = err?.error ?? 'Credenciales inválidas';
+        }
+      });
   }
 }

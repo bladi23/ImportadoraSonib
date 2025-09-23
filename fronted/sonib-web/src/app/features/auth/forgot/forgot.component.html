@@ -1,0 +1,12 @@
+<section class="auth">
+  <h2>Recuperar contraseña</h2>
+  <p *ngIf="!sent">Ingresa tu correo para enviarte un enlace de recuperación.</p>
+  <p *ngIf="sent" class="ok">Revisa tu correo. Si no aparece, mira en spam.</p>
+  <p class="err" *ngIf="error">{{error}}</p>
+
+  <form *ngIf="!sent" [formGroup]="form" (ngSubmit)="submit()">
+    <label>Correo</label>
+    <input type="email" formControlName="email" placeholder="ejemplo@mail.com">
+    <button type="submit" [disabled]="loading">{{loading ? 'Enviando…' : 'Enviar'}}</button>
+  </form>
+</section>

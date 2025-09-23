@@ -1,19 +1,23 @@
 <header class="hdr">
-  <div class="brand" routerLink="/">SONIB</div>
-  <nav>
+  <a class="brand" routerLink="/">IMPORTADORA SONIB</a>
+
+  <nav class="nav">
     <a routerLink="/catalog">Catálogo</a>
-    <a routerLink="/cart">Carrito</a>
-
-<ng-container *ngIf="(user$|async) as u; else loginLink">
-  <a *ngIf="u.roles?.includes('Admin')" routerLink="/admin/categories">Admin · Categorías</a>
-  <a *ngIf="u.roles?.includes('Admin')" routerLink="/admin/products">Admin · Productos</a>
-  <span class="email">{{u.email}}</span>
-  <button (click)="logout()">Salir</button>
-</ng-container>
-
-
-    <ng-template #loginLink>
-      <a routerLink="/login">Ingresar</a>
-    </ng-template>
+    <a routerLink="/contact">Contactos</a>
+    <!-- …más links si quieres… -->
   </nav>
+
+  <div class="user">
+    <ng-container *ngIf="(user$|async) as u; else anon">
+      <a *ngIf="u.roles?.includes('Admin')" routerLink="/admin/categories">Admin · Categorías</a>
+      <a *ngIf="u.roles?.includes('Admin')" routerLink="/admin/products">Admin · Productos</a>
+      <span class="email">{{u.email}}</span>
+      <button (click)="logout()">Salir</button>
+    </ng-container>
+    <ng-template #anon>
+      <button (click)="showLogin = true">Ingresar</button>
+    </ng-template>
+  </div>
 </header>
+
+<app-login-panel *ngIf="showLogin" (close)="showLogin=false"></app-login-panel>

@@ -1,0 +1,24 @@
+<section class="auth">
+  <h2>Crear cuenta</h2>
+  <p *ngIf="ok" class="ok">Cuenta creada. Redirigiendo…</p>
+  <p class="err" *ngIf="error">{{error}}</p>
+
+  <form *ngIf="!ok" [formGroup]="form" (ngSubmit)="submit()">
+    <label>Correo</label>
+    <input type="email" formControlName="email" placeholder="ejemplo@mail.com" />
+
+    <div formGroupName="passwordGroup">
+      <label>Contraseña</label>
+      <input type="password" formControlName="password" placeholder="Mínimo 6 caracteres" />
+
+      <label>Confirmar contraseña</label>
+      <input type="password" formControlName="confirm" placeholder="Vuelve a escribirla" />
+      <small class="err" *ngIf="form.get('passwordGroup')?.hasError('mismatch')">
+        Las contraseñas no coinciden.
+      </small>
+    </div>
+
+    <button type="submit" [disabled]="loading">{{loading ? 'Creando…' : 'Crear cuenta'}}</button>
+    <a routerLink="/login" class="link">¿Ya tienes cuenta? Inicia sesión</a>
+  </form>
+</section>

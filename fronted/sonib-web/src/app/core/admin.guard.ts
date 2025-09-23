@@ -1,4 +1,3 @@
-// src/app/core/admin.guard.ts
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { AuthService } from './auth.service';
@@ -10,7 +9,7 @@ export const adminGuard: CanActivateFn = () => {
 
   return auth.user$.pipe(
     take(1),
-    map((u: any) => {
+    map(u => {
       const ok = !!u && Array.isArray(u.roles) && u.roles.includes('Admin');
       if (ok) return true;
       router.navigate(['/login']);

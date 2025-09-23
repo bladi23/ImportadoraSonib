@@ -1,43 +1,82 @@
-import { Injectable, inject } from '@angular/core';
-import { BehaviorSubject, map } from 'rxjs';
-import { ApiService } from './api.service';
+import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { BehaviorSubject, EMPTY, Observable, of } from 'rxjs';
+import { catchError, tap } from 'rxjs/operators';
+import { environment } from '../../environments/environment';
 
-export interface UserState { email: string; roles: string[]; token: string }
+export interface AuthUser {
+  email: string;
+  roles: string[];
+}
+
+export interface LoginRes {
+  token: string;
+  email: string;
+  roles: string[];
+}
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private api = inject(ApiService);
-
-  private _user$ = new BehaviorSubject<UserState | null>(null);
+  private base = environment.apiBase;
+  private _user$ = new BehaviorSubject<AuthUser | null>(null);
   user$ = this._user$.asObservable();
-  isLoggedIn$ = this.user$.pipe(map(u => !!u));
-  isAdmin$ = this.user$.pipe(map(u => !!u?.roles?.includes('Admin')));
 
-  constructor() {
-    const token = localStorage.getItem('token');
-    const email = localStorage.getItem('email');
-    if (token && email) {
-      this.api.me().subscribe({
-        next: (me) => this._user$.next({ email: me.email, roles: me.roles, token }),
-        error: () => this.logout()
-      });
-    }
+  constructor(private http: HttpClient) {
+    this.restoreSession();
   }
 
-  login(email: string, password: string) { return this.api.login(email, password); }
+  private restoreSession() {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    // opcional: validar expiración del token aquí
+    this.me().subscribe(); // carga email/roles
+  }
 
+  currentUser() {
+    return this._user$.getValue();
+  }
+
+  login(email: string, password: string): Observable<LoginRes> {
+    return this.http.post<LoginRes>(`${this.base}/auth/login`, { email, password }).pipe(
+      tap(res => {
+        localStorage.setItem('token', res.token);
+        this._user$.next({ email: res.email, roles: res.roles ?? [] });
+      })
+    );
+  }
+ 
   afterLogin() {
-    const token = localStorage.getItem('token')!;
-    this.api.me().subscribe(me => this._user$.next({ email: me.email, roles: me.roles, token }));
+   return this.me();
   }
 
   logout() {
     localStorage.removeItem('token');
-    localStorage.removeItem('email');
     this._user$.next(null);
   }
-   isAdminSync(): boolean {
-  const u = (this as any)._user$?.getValue?.() as any;
-  return !!u?.roles?.includes('Admin');
+
+  me() {
+    return this.http.get<{ email: string | null; userId: string | null; roles: string[] }>(`${this.base}/auth/me`)
+      .pipe(
+        tap(m => {
+          if (m?.email) this._user$.next({ email: m.email, roles: m.roles ?? [] });
+          else this._user$.next(null);
+        }),
+        catchError(() => { this._user$.next(null); return of(null); })
+      );
+  }
+
+  // Opcional: endpoints de recuperación de contraseña si ya tienes en backend
+  forgot(email: string) {
+    return this.http.post(`${this.base}/auth/forgot`, { email })
+      .pipe(catchError(err => { throw err; }));
+  }
+
+  reset(code: string, email: string, newPassword: string) {
+    return this.http.post(`${this.base}/auth/reset`, { code, email, newPassword })
+      .pipe(catchError(err => { throw err; }));
+  }
+  register(email: string, password: string) {
+  return this.http.post(`${this.base}/auth/register`, { email, password });
 }
+
 }
