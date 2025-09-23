@@ -1,0 +1,11 @@
+<section class="auth">
+  <h2>Nueva contraseña</h2>
+  <p *ngIf="ok" class="ok">Contraseña cambiada. Redirigiendo…</p>
+  <p class="err" *ngIf="error">{{error}}</p>
+
+  <form *ngIf="!ok" [formGroup]="form" (ngSubmit)="submit()">
+    <label>Nueva contraseña</label>
+    <input type="password" formControlName="password" placeholder="Mínimo 8 caracteres" />
+    <button type="submit" [disabled]="loading">{{loading ? 'Guardando…' : 'Guardar'}}</button>
+  </form>
+</section>
