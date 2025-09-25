@@ -22,30 +22,44 @@ public class AuthController : ControllerBase
         _users = users; _signIn = signIn; _cfg = cfg;
     }
 
-    [HttpPost("register")]
-    [AllowAnonymous]
-    public async Task<IActionResult> Register([FromBody] RegisterDto dto)
-    {
-        var user = new IdentityUser { UserName = dto.Email, Email = dto.Email, EmailConfirmed = true };
-        var res = await _users.CreateAsync(user, dto.Password);
-        if (!res.Succeeded) return BadRequest(res.Errors);
-        await _users.AddToRoleAsync(user, "Customer");
-        return Ok(new { ok = true });
-    }
+[HttpPost("register")]
+public async Task<IActionResult> Register(RegisterDto dto)
+{
+    var exists = await _users.FindByEmailAsync(dto.Email);
+    if (exists != null)
+        return Conflict("El correo ya está registrado. Inicia sesión o usa 'Olvidé mi contraseña'.");
 
-    [HttpPost("login")]
-    [AllowAnonymous]
-    public async Task<ActionResult<LoginRes>> Login([FromBody] LoginDto dto)
-    {
-        var user = await _users.FindByEmailAsync(dto.Email);
-        if (user is null) return Unauthorized();
+    var user = new IdentityUser { UserName = dto.Email, Email = dto.Email, EmailConfirmed = true };
+    var res = await _users.CreateAsync(user, dto.Password);
+    if (!res.Succeeded) return BadRequest(res.Errors.Select(e => e.Description));
 
-        var ok = await _signIn.CheckPasswordSignInAsync(user, dto.Password, false);
-        if (!ok.Succeeded) return Unauthorized();
+    var roleRes = await _users.AddToRoleAsync(user, "Customer");
+    if (!roleRes.Succeeded) return StatusCode(500, roleRes.Errors.Select(e => e.Description));
 
-        var token = await BuildTokenAsync(user);
-        return Ok(new LoginRes(token, user.Email!));
-    }
+    return Ok();
+}
+
+
+
+   [HttpPost("login")]
+[AllowAnonymous]
+public async Task<ActionResult<LoginRes>> Login([FromBody] LoginDto dto)
+{
+    var user = await _users.FindByEmailAsync(dto.Email);
+    if (user is null) return Unauthorized();
+
+    var ok = await _signIn.CheckPasswordSignInAsync(user, dto.Password, lockoutOnFailure: false);
+    if (!ok.Succeeded) return Unauthorized();
+
+    // 👇 trae los roles reales del usuario
+    var roles = await _users.GetRolesAsync(user);
+
+    // 👇 genera el JWT incluyendo claims de rol
+    var token = await BuildTokenAsync(user, roles);
+
+    return Ok(new LoginRes(token, user.Email!, roles));
+}
+
 
     [HttpGet("me")]
     [Authorize]
@@ -133,28 +147,30 @@ public class AuthController : ControllerBase
         return res.Succeeded ? NoContent() : BadRequest(res.Errors);
     }
 
-    private async Task<string> BuildTokenAsync(IdentityUser user)
+    private async Task<string> BuildTokenAsync(IdentityUser user, IList<string> roles)
+{
+    var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_cfg["Jwt:Key"]!));
+    var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+    var claims = new List<Claim>
     {
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_cfg["Jwt:Key"]!));
-        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+        new Claim(JwtRegisteredClaimNames.Sub, user.Email!),
+        new Claim(ClaimTypes.Email, user.Email!),
+        new Claim(ClaimTypes.NameIdentifier, user.Id),
+        new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+    };
 
-        var claims = new List<Claim> {
-            new Claim(JwtRegisteredClaimNames.Sub, user.Email!),
-            new Claim(ClaimTypes.NameIdentifier, user.Id),
-            new Claim(ClaimTypes.Email, user.Email!),  
-            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-        };
+    // 👇 agrega cada rol al token (claim "role")
+    claims.AddRange(roles.Select(r => new Claim(ClaimTypes.Role, r)));
 
-        var roles = await _users.GetRolesAsync(user);
-        claims.AddRange(roles.Select(r => new Claim(ClaimTypes.Role, r)));
+    var token = new JwtSecurityToken(
+        issuer: _cfg["Jwt:Issuer"],
+        audience: null,
+        claims: claims,
+        expires: DateTime.UtcNow.AddHours(8),
+        signingCredentials: creds
+    );
 
-        var token = new JwtSecurityToken(
-            issuer: _cfg["Jwt:Issuer"],
-            audience: null,
-            claims: claims,
-            expires: DateTime.UtcNow.AddHours(8),
-            signingCredentials: creds
-        );
-        return new JwtSecurityTokenHandler().WriteToken(token);
-    }
+    return new JwtSecurityTokenHandler().WriteToken(token);
+}
 }

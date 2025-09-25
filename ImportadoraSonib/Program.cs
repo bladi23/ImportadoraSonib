@@ -156,20 +156,20 @@ app.UseStaticFiles(new StaticFileOptions
 {
     OnPrepareResponse = ctx =>
     {
-        var path = ctx.File?.PhysicalPath; // 👈 evita warning CS8602
+        var path = ctx.File?.PhysicalPath;
         if (path != null && path.Contains(Path.Combine("wwwroot", "uploads", "products")))
         {
             var headers = ctx.Context.Response.GetTypedHeaders();
-            headers.CacheControl = new CacheControlHeaderValue
+            headers.CacheControl = new Microsoft.Net.Http.Headers.CacheControlHeaderValue
             {
                 Public = true,
                 MaxAge = TimeSpan.FromDays(30)
             };
-            // 'immutable' se agrega como extensión (no existe la propiedad Immutable)
             headers.CacheControl.Extensions.Add(new NameValueHeaderValue("immutable"));
         }
     }
 });
+if (!app.Environment.IsDevelopment())
 {
     app.UseHsts();
 }
@@ -182,7 +182,7 @@ app.UseSwaggerUI();
 app.UseCors("ng");
 app.UseSession();
 
-app.UseStaticFiles();
+//app.UseStaticFiles();
 
 app.UseAuthentication();
 app.UseAuthorization();

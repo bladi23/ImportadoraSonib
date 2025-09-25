@@ -1,0 +1,13 @@
+.detail {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+img { width: 100%; border-radius: 12px; }
+h1 { margin: 0 0 .25rem 0; }
+.cat { color: #666; margin-bottom: .5rem; }
+.price { font-size: 1.25rem; font-weight: 700; margin: .5rem 0 1rem; }
+.desc { white-space: pre-wrap; }
+.buy { display: flex; align-items: center; gap: .75rem; margin-top: 1rem; }
+input[type="number"] { width: 80px; }
+.err { color: #c00; }

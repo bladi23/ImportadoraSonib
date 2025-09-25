@@ -2,9 +2,11 @@
   <h2>Tu carrito</h2>
 
   <div *ngIf="loading">Cargando...</div>
-  <p class="msg" *ngIf="msg">{{msg}}</p>
+  <p class="msg" *ngIf="msg">{{ msg }}</p>
 
-  <div *ngIf="!loading && !items.length" class="empty">Todavía no tienes productos en el carrito.</div>
+  <div *ngIf="!loading && !items.length" class="empty">
+    Todavía no tienes productos en el carrito.
+  </div>
 
   <table *ngIf="!loading && items.length">
     <thead>
@@ -18,23 +20,28 @@
     </thead>
     <tbody>
       <tr *ngFor="let it of items">
-        <td>{{it.productName}}</td>
-        <td class="num">{{it.quantity}}</td>
-        <td class="num">$ {{it.unitPrice | number:'1.2-2'}}</td>
-        <td class="num">$ {{it.subtotal | number:'1.2-2'}}</td>
-        <td><button (click)="remove(it)">Quitar</button></td>
+        <td>{{ it.productName }}</td>
+        <td class="num">{{ it.quantity }}</td>
+        <td class="num">$ {{ it.unitPrice | number:'1.2-2' }}</td>
+        <td class="num">$ {{ it.subtotal | number:'1.2-2' }}</td>
+       
+        <td><button (click)="remove(it.productId)">Quitar</button></td>
+
       </tr>
     </tbody>
     <tfoot>
       <tr>
         <td colspan="3" class="num"><b>Total</b></td>
-        <td class="num"><b>$ {{total | number:'1.2-2'}}</b></td>
+        <td class="num"><b>$ {{ total | number:'1.2-2' }}</b></td>
         <td></td>
       </tr>
     </tfoot>
   </table>
 
   <div class="paybar" *ngIf="items.length">
-    <button (click)="pagarDemo()" [disabled]="paying">Pagar (DEMO)</button>
+    <button class="primary" (click)="payDemo()">Pagar (DEMO)</button>
+    <!-- Si quieres también el botón de WhatsApp, descomenta:-->
+    <button class="secondary" (click)="payWhatsApp()">Pedir por WhatsApp</button> 
+    
   </div>
 </section>

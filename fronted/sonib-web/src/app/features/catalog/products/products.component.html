@@ -3,27 +3,44 @@
     <h3>Categorías</h3>
     <ul>
       <li [class.active]="!selected" (click)="selected=''; page=1; load()">Todas</li>
-      <li *ngFor="let c of categories" [class.active]="selected===c.slug" (click)="selected=c.slug; page=1; load()">{{c.name}}</li>
+      <li *ngFor="let c of categories"
+          [class.active]="selected===c.slug"
+          (click)="selected=c.slug; page=1; load()">
+        {{ c.name }}
+      </li>
     </ul>
   </aside>
 
   <main>
     <div class="toolbar">
-      <input placeholder="Buscar..." [(ngModel)]="search" (keyup.enter)="page=1; load()"/>
+      <input placeholder="Buscar..."
+             [(ngModel)]="search"
+             (keyup.enter)="page=1; load()"/>
       <button (click)="page=1; load()">Buscar</button>
     </div>
 
-    <div class="grid" *ngIf="!loading; else spinner">
-      <div class="card" *ngFor="let p of items">
-        <img [src]="p.imageUrl || 'https://via.placeholder.com/300x200?text=Producto'" alt="{{p.name}}"/>
-        <div class="info">
-          <h4>{{p.name}}</h4>
-          <p class="cat">{{p.category}}</p>
-          <div class="price">$ {{p.price | number:'1.2-2'}}</div>
-        </div>
-        
-        <button (click)="addToCart(p)">Añadir al carrito</button>
+    <!-- resultados -->
+    <div *ngIf="!loading && items?.length===0" class="empty">
+      No se encontraron productos.
+    </div>
 
+    <!-- grid -->
+    <div class="grid" *ngIf="!loading && items?.length; else spinner">
+      <div class="card" *ngFor="let p of items">
+        <!-- ZONA CLICABLE: imagen / título llevan al detalle -->
+        <a class="media" [routerLink]="['/product', p.slug]" aria-label="Ver {{p.name}}">
+          <img [src]="p.imageUrl || 'https://via.placeholder.com/300x200?text=Producto'"
+               [alt]="p.name" />
+        </a>
+
+        <div class="info">
+          <a class="title" [routerLink]="['/product', p.slug]">{{ p.name }}</a>
+          <p class="cat">{{ p.category }}</p>
+          <div class="price">$ {{ p.price | number:'1.2-2' }}</div>
+        </div>
+
+        <!-- Botón de carrito NO navega -->
+        <button (click)="addToCart(p); $event.stopPropagation()">Añadir al carrito</button>
       </div>
     </div>
 
@@ -31,7 +48,7 @@
 
     <div class="pager">
       <button [disabled]="page===1" (click)="page=page-1; load()">Anterior</button>
-      <span>{{page}}</span>
+      <span>{{ page }}</span>
       <button [disabled]="(page*pageSize)>=total" (click)="page=page+1; load()">Siguiente</button>
     </div>
   </main>

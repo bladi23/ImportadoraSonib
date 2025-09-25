@@ -1,0 +1,23 @@
+<div *ngIf="loading">Cargando…</div>
+<p class="err" *ngIf="!loading && error">{{error}}</p>
+
+<section *ngIf="!loading && p">
+  <a routerLink="/catalog">← Volver</a>
+
+  <div class="detail">
+    <img [src]="p.imageUrl || 'https://via.placeholder.com/600x400?text=Producto'" [alt]="p.name" />
+    <div class="info">
+      <h1>{{ p.name }}</h1>
+      <div class="cat">{{ p.category }}</div>
+      <div class="price">$ {{ p.price | number:'1.2-2' }}</div>
+
+      <p class="desc" [innerText]="p.description || 'Sin descripción.'"></p>
+
+      <div class="buy">
+        <label>Cantidad</label>
+        <input type="number" [(ngModel)]="qty" min="1" [max]="p.stock" />
+        <button (click)="addToCart()">Añadir al carrito</button>
+      </div>
+    </div>
+  </div>
+</section>

@@ -4,6 +4,8 @@
   <nav class="nav">
     <a routerLink="/catalog">Catálogo</a>
     <a routerLink="/contact">Contactos</a>
+    <a routerLink="/cart">Carrito <span *ngIf="(count$|async) as c">({{ c }})</span></a>
+
     <!-- …más links si quieres… -->
   </nav>
 

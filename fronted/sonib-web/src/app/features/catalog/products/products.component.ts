@@ -4,11 +4,12 @@ import { FormsModule } from '@angular/forms';
 import { ApiService, Category, ProductListItem } from '../../../core/api.service';
 import { CartService } from '../../../core/cart.service';
 import { inject } from '@angular/core';
+import { RouterLink } from '@angular/router';
 
 @Component({
   selector: 'app-products',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './products.component.html',
   styleUrls: ['./products.component.scss']
 })
@@ -34,10 +35,11 @@ export class ProductsComponent implements OnInit {
       search: this.search || undefined
     }).subscribe(res => { this.items = res.items; this.total = res.total; this.loading = false; });
   }
-  addToCart(p: any) {
-    this.cart.add(p.id, 1).subscribe({
-      next: () => alert('Añadido al carrito'),
-      error: (e) => alert('No se pudo añadir: ' + (e?.error || 'error'))
-    });
-  }
+  addToCart(p: ProductListItem) {
+  this.cart.add(p.id, 1).subscribe({
+    next: () => {},
+    complete: () => console.log('Añadido al carrito'),
+    error: (e) => alert('No se pudo añadir: ' + (e?.error || 'error'))
+  });
+}
 }

@@ -2,9 +2,9 @@
   <h2>Ingresar</h2>
   <form [formGroup]="form" (ngSubmit)="submit()">
     <label>Email</label>
-    <input type="email" formControlName="email" placeholder="admin@sonib.com"/>
+    <input type="email" formControlName="email" placeholder="Ej.: ejemplo@mail.com"/>
     <label>Contraseña</label>
-    <input type="password" formControlName="password" placeholder="••••••••"/>
+    <input type="password" formControlName="password" placeholder="Ingrese su contraseña"/>
     <button type="submit" [disabled]="loading">Entrar</button>
     <p class="err" *ngIf="error">{{error}}</p>
   </form>

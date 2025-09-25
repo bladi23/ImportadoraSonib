@@ -1,4 +1,4 @@
-<div class="overlay" (click)="close.emit"></div>
+<div class="overlay" (click)="close.emit()"></div>
 
 <div class="panel" role="dialog" aria-label="Ingreso">
   <h3>Correo y contraseña</h3>
@@ -18,13 +18,13 @@
     <p class="err" *ngIf="error">{{ error }}</p>
 
     <div class="actions">
-      <button type="button" class="link" (click)="close.emit">Volver</button>
+      <button type="button" class="link" (click)="close.emit()">Volver</button>
       <button type="submit" [disabled]="loading">{{ loading ? 'Ingresando…' : 'Entrar' }}</button>
     </div>
   </form>
 
   <div class="alt">
     ¿No tiene una cuenta?
-    <a routerLink="/register" (click)="close.emit()">Regístrese</a>
+    <a routerLink="/auth/register" (click)="close.emit()" class="register">Regístrese</a>
   </div>
 </div>

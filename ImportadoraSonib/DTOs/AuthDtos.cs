@@ -8,7 +8,7 @@ public record RegisterDto([Required, EmailAddress] string Email,
 public record LoginDto([Required, EmailAddress] string Email,
                        [Required] string Password);
 
-public record LoginRes(string Token, string Email);
+public record LoginRes(string Token, string Email, IList<string> Roles);
 
 public record ChangePwdDto([Required] string CurrentPassword,
                            [Required, MinLength(8)] string NewPassword);
