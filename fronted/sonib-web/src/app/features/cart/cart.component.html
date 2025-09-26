@@ -39,9 +39,13 @@
   </table>
 
   <div class="paybar" *ngIf="items.length">
+    <!-- Botones de pago DEMO-->
     <button class="primary" (click)="payDemo()">Pagar (DEMO)</button>
     <!-- Si quieres también el botón de WhatsApp, descomenta:-->
     <button class="secondary" (click)="payWhatsApp()">Pedir por WhatsApp</button> 
+    <!-- Si tienes PayPal, descomenta:-->
+    <button class="primary" (click)="payWithPayPal()">Pagar con PayPal</button>
+
     
   </div>
 </section>

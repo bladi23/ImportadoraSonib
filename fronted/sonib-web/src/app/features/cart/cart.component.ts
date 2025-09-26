@@ -105,4 +105,26 @@ payDemo() {
         error: () => this.msg = 'No se pudo crear el pedido por WhatsApp.'
       });
    }
+   payWithPayPal() {
+  if (!this.items.length) return;
+
+  const payload = { items: this.items.map(i => ({ productId: i.productId, quantity: i.quantity })) };
+
+  // 1) Crear orden en tu sistema
+  this.http.post<{ orderId:number; total:number }>(`${this.base}/orders`, payload).subscribe({
+    next: o => {
+      // 2) Pedir checkout de PayPal y redirigir
+      this.http.post<{ approveUrl:string }>(`${this.base}/paypal/create-checkout`, { orderId: o.orderId })
+        .subscribe({
+          next: r => window.location.href = r.approveUrl,
+          error: _ => this.msg = 'No se pudo iniciar PayPal.'
+        });
+    },
+    error: err => {
+      if (err?.status === 401) this.router.navigate(['/login'], { queryParams: { returnUrl: '/cart' }});
+      else this.msg = 'No se pudo crear la orden.';
+    }
+  });
+}
+
 }

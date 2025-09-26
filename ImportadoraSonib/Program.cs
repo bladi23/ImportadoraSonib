@@ -129,7 +129,7 @@ builder.Services.AddSession(o =>
 
 
 builder.Services.AddScoped<RecoEventService>();
-
+builder.Services.AddHttpClient<PayPalService>(); 
 
 
 builder.Services.AddHttpContextAccessor();
