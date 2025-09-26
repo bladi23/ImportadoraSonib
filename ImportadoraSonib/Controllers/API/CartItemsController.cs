@@ -11,10 +11,11 @@ public class CartItemsController : ControllerBase
 {
     private readonly CartService _cart;
     private readonly ApplicationDbContext _db;
+    private readonly RecoEventService _reco;
 
-    public CartItemsController(CartService cart, ApplicationDbContext db)
+    public CartItemsController(CartService cart, ApplicationDbContext db, RecoEventService reco)
     {
-        _cart = cart; _db = db;
+        _cart = cart; _db = db; _reco = reco;
     }
 
     [HttpGet]
@@ -45,6 +46,8 @@ public class CartItemsController : ControllerBase
         if (p is null) return NotFound("Producto no existe o no disponible.");
 
         await _cart.AddAsync(req.ProductId, req.Qty);
+        _ = _reco.TrackAsync("add", req.ProductId);
+
         return NoContent();
     }
 

@@ -14,10 +14,11 @@ public class ProductsController : ControllerBase
     private readonly ApplicationDbContext _db;
     private readonly IMemoryCache _cache;
     private readonly CatalogCacheStamp _stamp;
+    private readonly RecoEventService _reco;
 
-    public ProductsController(ApplicationDbContext db, IMemoryCache cache, CatalogCacheStamp stamp)
+    public ProductsController(ApplicationDbContext db, IMemoryCache cache, CatalogCacheStamp stamp, RecoEventService reco)
     {
-        _db = db; _cache = cache; _stamp = stamp;
+        _db = db; _cache = cache; _stamp = stamp; _reco = reco;
     }
 
     // ============ PÚBLICO (catálogo con caché + stamp) ============
@@ -90,6 +91,8 @@ public class ProductsController : ControllerBase
             p.Id, p.Name, p.Slug, p.Description, p.Price, p.ImageUrl, p.Stock, p.CategoryId, p.Category!.Name);
 
         _cache.Set(key, dto, TimeSpan.FromSeconds(60));
+        _ = _reco.TrackAsync("view", p.Id);
+
         return Ok(dto);
     }
 

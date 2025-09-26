@@ -123,9 +123,13 @@ builder.Services.AddSession(o =>
     o.Cookie.Name = ".Sonib.Session";
     o.IdleTimeout = TimeSpan.FromMinutes(20);
     o.Cookie.HttpOnly = true;
-    o.Cookie.SameSite = Microsoft.AspNetCore.Http.SameSiteMode.None; 
+    o.Cookie.SameSite = Microsoft.AspNetCore.Http.SameSiteMode.None;
     o.Cookie.SecurePolicy = CookieSecurePolicy.Always;
 });
+
+
+builder.Services.AddScoped<RecoEventService>();
+
 
 
 builder.Services.AddHttpContextAccessor();

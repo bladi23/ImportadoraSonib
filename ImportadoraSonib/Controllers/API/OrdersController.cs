@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 
+
 namespace ImportadoraSonib.Controllers.Api;
 
 [ApiController]
@@ -13,10 +14,12 @@ public class OrdersController : ControllerBase
 {
     private readonly ApplicationDbContext _db;
     private readonly WhatsappLinkService _wa;
+    private readonly RecoEventService _reco;
 
-    public OrdersController(ApplicationDbContext db, WhatsappLinkService wa)
+
+    public OrdersController(ApplicationDbContext db, WhatsappLinkService wa, RecoEventService reco)
     {
-        _db = db; _wa = wa;
+        _db = db; _wa = wa; _reco = reco;
     }
 
 
@@ -46,8 +49,8 @@ public class OrdersController : ControllerBase
                 Quantity = it.Quantity,
                 UnitPrice = p.Price
             });
-        }   
-        
+        }
+
         // Validar stock (si usas)
         foreach (var line in order.Items)
         {
@@ -57,6 +60,7 @@ public class OrdersController : ControllerBase
 
             if (p.Stock < line.Quantity)
                 return Conflict(new { message = $"Stock insuficiente para {p.Name}. Disponible: {p.Stock}, solicitado: {line.Quantity}." });
+                
         }
 
         order.Total = order.Items.Sum(i => i.UnitPrice * i.Quantity);
@@ -66,6 +70,14 @@ public class OrdersController : ControllerBase
 
         var lines = order.Items.Join(prods, d => d.ProductId, p => p.Id, (d, p) => (p.Name, d.Quantity, d.UnitPrice));
         var link = _wa.BuildOrderLink(order.Id, lines.Select(x => (x.Name, x.Quantity, x.UnitPrice)), order.Total);
+        var uid = User.FindFirstValue(ClaimTypes.NameIdentifier);
+var sid = HttpContext.Session?.Id ?? Guid.NewGuid().ToString("N");
+
+foreach (var od in order.Items)
+{
+    if (od.ProductId.HasValue) // solo si hay FK válida
+        _ = _reco.TrackAsync("purchase", od.ProductId.Value, uid, sid);
+}
         return Ok(new { orderId = order.Id, total = order.Total, whatsappUrl = link });
     }
    [Authorize]
