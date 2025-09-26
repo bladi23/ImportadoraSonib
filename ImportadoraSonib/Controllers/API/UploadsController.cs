@@ -16,8 +16,9 @@ public class UploadsController : ControllerBase
 
     [Authorize(Roles = "Admin")]
     [HttpPost("product-image")]
+    [Consumes("multipart/form-data")]
     [RequestSizeLimit(MaxBytes)]
-    public async Task<IActionResult> UploadProductImage(IFormFile file, CancellationToken ct)
+    public async Task<IActionResult> UploadProductImage([FromForm] IFormFile file, CancellationToken ct)
     {
         if (file is null || file.Length == 0) return BadRequest("Archivo vacío.");
         if (file.Length > MaxBytes) return BadRequest("Tamaño máximo permitido: 5 MB.");
@@ -29,15 +30,8 @@ public class UploadsController : ControllerBase
 
         // Intentar abrir como imagen (valida que no sea contenido malicioso)
         using var stream = file.OpenReadStream();
-        Image image;
-        try
-        {
-            image = await Image.LoadAsync(stream, ct);
-        }
-        catch
-        {
-            return BadRequest("El archivo no es una imagen válida.");
-        }
+        
+        using var image = await Image.LoadAsync(stream, ct);
 
         // Protección por dimensiones (ej. 20000 x 20000)
         if (image.Width > MaxPixels || image.Height > MaxPixels)

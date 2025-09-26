@@ -3,6 +3,7 @@ using ImportadoraSonib.Data;
 using ImportadoraSonib.Infrastructure.Seeds;
 using ImportadoraSonib.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Http; // 
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -35,6 +36,13 @@ builder.Services.AddSwaggerGen(c =>
     };
     c.AddSecurityDefinition("Bearer", scheme);
     c.AddSecurityRequirement(new OpenApiSecurityRequirement { { scheme, Array.Empty<string>() } });
+    // Renderizar IFormFile como campo de archivo en Swagger
+c.MapType<IFormFile>(() => new OpenApiSchema { Type = "string", Format = "binary" });
+c.MapType<IEnumerable<IFormFile>>(() => new OpenApiSchema {
+    Type = "array",
+    Items = new OpenApiSchema { Type = "string", Format = "binary" }
+});
+
 });
 
 // ───────────────── Controllers ─────────────────

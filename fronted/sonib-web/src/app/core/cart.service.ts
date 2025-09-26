@@ -43,4 +43,9 @@ export class CartService {
     return this.http.delete(`${this.base}/cartitems/${productId}`)
       .pipe(tap(() => this.refresh()));
   }
+  clear() {
+  return this.http.delete(`${this.base}/cartitems/all`)
+    .pipe(tap(() => this.refresh()));
+}
+  
 }

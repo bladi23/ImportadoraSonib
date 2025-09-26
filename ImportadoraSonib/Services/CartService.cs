@@ -1,12 +1,15 @@
 using ImportadoraSonib.Data;
 using ImportadoraSonib.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
+
 
 namespace ImportadoraSonib.Services;
 
 public class CartService
 {
     private readonly ApplicationDbContext _db;
+
     private readonly IHttpContextAccessor _http;
 
     public CartService(ApplicationDbContext db, IHttpContextAccessor http)
@@ -78,9 +81,22 @@ public class CartService
     }
 
     public async Task ClearAsync()
-    {
-        var items = await GetCurrentAsync();
-        _db.CartItems.RemoveRange(items);
-        await _db.SaveChangesAsync();
-    }
+{
+    var http = _http.HttpContext;
+    var userId = http?.User.FindFirstValue(ClaimTypes.NameIdentifier);
+    var sessionId = http?.Session?.Id;
+
+    var q = _db.CartItems.AsQueryable();
+
+    if (!string.IsNullOrEmpty(userId))
+        q = q.Where(c => c.UserId == userId);
+    else if (!string.IsNullOrEmpty(sessionId))
+        q = q.Where(c => c.SessionId == sessionId);
+    else
+        return;
+
+    var all = await q.ToListAsync();
+    _db.CartItems.RemoveRange(all);
+    await _db.SaveChangesAsync();
+}
 }

@@ -5,6 +5,8 @@
     <a routerLink="/catalog">Catálogo</a>
     <a routerLink="/contact">Contactos</a>
     <a routerLink="/cart">Carrito <span *ngIf="(count$|async) as c">({{ c }})</span></a>
+    <a routerLink="/account/orders">Mis pedidos</a>
+
 
     <!-- …más links si quieres… -->
   </nav>

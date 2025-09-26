@@ -57,38 +57,85 @@ public class PaymentsController : ControllerBase
     // Outcome: "approved" | "declined" | "canceled"
 
     /// Confirma la sesión DEMO (cambia estado de la orden según Outcome)
-    [Authorize]
-    [HttpPost("demo/confirm")]
-    public async Task<IActionResult> DemoConfirm([FromBody] DemoConfirmReq req)
+    /// 
+    /// 
+   // using System.Security.Claims;  // ya lo tienes arriba
+
+[Authorize]
+[HttpPost("demo/confirm")]
+public async Task<IActionResult> DemoConfirm([FromBody] DemoConfirmReq req)
+{
+    var order = await _db.Orders.FirstOrDefaultAsync(o => o.Id == req.OrderId);
+    if (order is null) return NotFound("Orden no existe.");
+
+    if (!string.Equals(order.CheckoutSessionId, req.SessionId, StringComparison.OrdinalIgnoreCase))
+        return BadRequest("SessionId inválido para esta orden.");
+
+    switch (req.Outcome?.ToLowerInvariant())
     {
-        var order = await _db.Orders.FirstOrDefaultAsync(o => o.Id == req.OrderId);
-        if (order is null) return NotFound("Orden no existe.");
+       case "approved":
+{
+    // Carga la orden con items y productos para validar stock al momento de pagar
+    var full = await _db.Orders
+        .Include(x => x.Items)
+        .ThenInclude(i => i.Product)
+        .FirstOrDefaultAsync(x => x.Id == order.Id);
 
-        if (!string.Equals(order.CheckoutSessionId, req.SessionId, StringComparison.OrdinalIgnoreCase))
-            return BadRequest("SessionId inválido para esta orden.");
+    if (full is null) return NotFound("Orden no existe.");
 
-        switch (req.Outcome?.ToLowerInvariant())
-        {
-            case "approved":
-                order.Status = "Pagado";
-                order.PaidAt = DateTime.UtcNow;
-                await _db.SaveChangesAsync();
-                return Ok(new { ok = true, status = order.Status });
+    // Validar stock disponible
+    foreach (var d in full.Items)
+    {
+        if (d.Product is null || d.Product.IsDeleted || !d.Product.IsActive)
+            return Conflict(new { message = $"El producto {d.ProductId} ya no está disponible." });
 
-            case "declined":
-                order.Status = "Pendiente"; // sigue pendiente si la tarjeta “falló”
-                await _db.SaveChangesAsync();
-                return Ok(new { ok = false, status = order.Status, reason = "Tarjeta rechazada (DEMO)" });
-
-            case "canceled":
-                order.Status = "Cancelado";
-                await _db.SaveChangesAsync();
-                return Ok(new { ok = false, status = order.Status });
-
-            default:
-                return BadRequest("Outcome inválido (usa approved | declined | canceled).");
-        }
+        if (d.Product.Stock < d.Quantity)
+            return Conflict(new { message = $"Stock insuficiente para {d.Product.Name}. Disponible: {d.Product.Stock}, solicitado: {d.Quantity}." });
     }
+
+    // Descontar stock (control de concurrencia optimista por RowVersion si la tienes en Product)
+    try
+    {
+        foreach (var d in full.Items)
+        {
+            d.Product!.Stock -= d.Quantity;
+            d.Product.UpdatedAt = DateTime.UtcNow;
+        }
+
+        order.Status = "Pagado";
+        order.PaidAt = DateTime.UtcNow;
+
+        // Limpia carrito: por UserId y también por SessionId (si existiese en tu CartService)
+        if (!string.IsNullOrEmpty(order.UserId))
+        {
+            var userCart = await _db.CartItems.Where(c => c.UserId == order.UserId).ToListAsync();
+            _db.CartItems.RemoveRange(userCart);
+        }
+
+        await _db.SaveChangesAsync();
+    }
+    catch (DbUpdateConcurrencyException)
+    {
+        return Conflict(new { message = "Conflicto de concurrencia al descontar stock. Por favor reintenta." });
+    }
+
+    return Ok(new { ok = true, status = order.Status });
+}
+
+        case "declined":
+            order.Status = "Pendiente";
+            await _db.SaveChangesAsync();
+            return Ok(new { ok = false, status = order.Status, reason = "Tarjeta rechazada (DEMO)" });
+
+        case "canceled":
+            order.Status = "Cancelado";
+            await _db.SaveChangesAsync();
+            return Ok(new { ok = false, status = order.Status });
+
+        default:
+            return BadRequest("Outcome inválido (usa approved | declined | canceled).");
+    }
+}
 
     /// Ver estado y detalles de una orden
     [Authorize]

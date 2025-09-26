@@ -10,13 +10,14 @@ namespace ImportadoraSonib.Controllers.Api;
 [ApiController]
 [Route("api/[controller]")]
 public class OrdersController : ControllerBase
-{private readonly ApplicationDbContext _db;
-private readonly WhatsappLinkService _wa;
-
-public OrdersController(ApplicationDbContext db, WhatsappLinkService wa)
 {
-    _db = db; _wa = wa;
-}
+    private readonly ApplicationDbContext _db;
+    private readonly WhatsappLinkService _wa;
+
+    public OrdersController(ApplicationDbContext db, WhatsappLinkService wa)
+    {
+        _db = db; _wa = wa;
+    }
 
 
     public record CartLine(int ProductId, int Quantity);
@@ -45,7 +46,19 @@ public OrdersController(ApplicationDbContext db, WhatsappLinkService wa)
                 Quantity = it.Quantity,
                 UnitPrice = p.Price
             });
+        }   
+        
+        // Validar stock (si usas)
+        foreach (var line in order.Items)
+        {
+            var p = await _db.Products.AsNoTracking().FirstOrDefaultAsync(x => x.Id == line.ProductId);
+            if (p is null || !p.IsActive || p.IsDeleted)
+                return Conflict(new { message = $"El producto {line.ProductId} ya no está disponible." });
+
+            if (p.Stock < line.Quantity)
+                return Conflict(new { message = $"Stock insuficiente para {p.Name}. Disponible: {p.Stock}, solicitado: {line.Quantity}." });
         }
+
         order.Total = order.Items.Sum(i => i.UnitPrice * i.Quantity);
 
         _db.Orders.Add(order);
@@ -55,4 +68,46 @@ public OrdersController(ApplicationDbContext db, WhatsappLinkService wa)
         var link = _wa.BuildOrderLink(order.Id, lines.Select(x => (x.Name, x.Quantity, x.UnitPrice)), order.Total);
         return Ok(new { orderId = order.Id, total = order.Total, whatsappUrl = link });
     }
+   [Authorize]
+[HttpGet("my")]
+public async Task<IActionResult> MyOrders()
+{
+    var uid = User.FindFirstValue(ClaimTypes.NameIdentifier);
+    var orders = await _db.Orders
+        .AsNoTracking()
+        .Where(o => o.UserId == uid)
+        .OrderByDescending(o => o.Id)
+        .Select(o => new { o.Id, o.Status, o.Total, o.OrderDate })
+        .ToListAsync();
+
+    return Ok(orders);
+}
+
+[Authorize]
+[HttpGet("{id:int}")]
+public async Task<IActionResult> GetById(int id)
+{
+    var o = await _db.Orders
+        .Include(x => x.Items).ThenInclude(i => i.Product)
+        .AsNoTracking()
+        .FirstOrDefaultAsync(x => x.Id == id);
+
+    if (o is null) return NotFound();
+
+    var uid = User.FindFirstValue(ClaimTypes.NameIdentifier);
+    if (o.UserId != uid && !User.IsInRole("Admin")) return Forbid();
+
+    return Ok(new
+    {
+        o.Id, o.Status, o.Total, o.OrderDate, o.PaidAt,
+        Items = o.Items.Select(i => new
+        {
+            i.ProductId,
+            Product = i.Product!.Name,
+            i.Quantity,
+            i.UnitPrice,
+            Subtotal = i.UnitPrice * i.Quantity
+        })
+    });
+}
 }

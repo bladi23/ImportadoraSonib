@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterModule, Router } from '@angular/router';
 import { PaymentsService } from '../../core/payments.service';
 import { CartService } from '../../core/cart.service';
+import { finalize } from 'rxjs/operators';
 
 @Component({
   selector: 'app-demo-checkout',
@@ -27,7 +28,7 @@ export class DemoCheckoutComponent {
     this.route.queryParamMap.subscribe(p => {
       this.orderId  = Number(p.get('orderId'));
       this.sessionId = p.get('sessionId') || '';
-      // Acepta amount o total (por si cambiaste en el futuro)
+      // Acepta amount o total (por si cambias en el futuro)
       this.amount = p.get('amount') || p.get('total') || '';
 
       if (!this.orderId || !this.sessionId) {
@@ -37,33 +38,34 @@ export class DemoCheckoutComponent {
   }
 
   confirm(outcome: 'approved'|'declined'|'canceled') {
-    if (!this.orderId || !this.sessionId) { this.msg = 'Sesión de pago inválida.'; return; }
+    if (!this.orderId || !this.sessionId) return;
 
-    this.loading = true; this.msg = '';
-    this.payments.demoConfirm(this.orderId, this.sessionId, outcome).subscribe({
-      next: (res) => {
-        this.loading = false;
+    this.loading = true; 
+    this.msg = '';
 
-        if (res.ok) {
-          this.msg = 'Pago aprobado (DEMO). Redirigiendo...';
-          // Refresca contador del carrito; si además tu backend lo limpia al pagar,
-          // esto mostrará el nuevo estado.
-          this.cart.refresh();
+    this.payments.demoConfirm(this.orderId, this.sessionId, outcome)
+      .pipe(finalize(() => this.loading = false))
+      .subscribe({
+        next: (res) => {
+          if (outcome === 'approved' && res.ok) {
+            // ✅ vaciamos contador del header (el backend ya limpió el carrito)
+            this.cart.refresh();
+            this.router.navigate(['/checkout/success'], { queryParams: { orderId: this.orderId } });
+            return;
+          }
 
-          // Redirige al carrito (puedes ajustar a otra página si quieres)
-          setTimeout(() => this.router.navigate(['/cart']), 800);
-        } else {
+          if (outcome === 'canceled') {
+            this.router.navigate(['/checkout/cancel'], { queryParams: { orderId: this.orderId } });
+            return;
+          }
+
+          // rechazado o cualquier otro estado
           this.msg = res.reason || ('Estado: ' + res.status);
+        },
+        error: (err) => {
+          const beMsg = err?.error?.message || (typeof err?.error === 'string' ? err.error : '');
+          this.msg = beMsg || 'No se pudo confirmar el pago';
         }
-      },
-      error: (e) => {
-        this.loading = false;
-        if (e?.status === 401) {
-          this.router.navigate(['/login'], { queryParams: { returnUrl: '/cart' }});
-        } else {
-          this.msg = 'No se pudo confirmar el pago';
-        }
-      }
-    });
+      });
   }
 }

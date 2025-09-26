@@ -48,10 +48,21 @@ public class CartItemsController : ControllerBase
         return NoContent();
     }
 
+    // Quitar UN producto del carrito
+    // DELETE /api/cartitems/{productId}
     [HttpDelete("{productId:int}")]
     public async Task<IActionResult> Remove(int productId)
     {
         await _cart.RemoveAsync(productId);
+        return NoContent();
+    }
+
+    // Vaciar TODO el carrito (usuario o sesión actual)
+    // DELETE /api/cartitems
+    [HttpDelete("all")]
+    public async Task<IActionResult> ClearAll()
+    {
+        await _cart.ClearAsync();
         return NoContent();
     }
 }
