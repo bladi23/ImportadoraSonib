@@ -10,5 +10,5 @@ export class OrdersService {
   constructor(private http: HttpClient) {}
 
   my() { return this.http.get<MyOrderRow[]>(`${this.base}/orders/my`); }
-  get(id: number) { return this.http.get<any>(`${this.base}/orders/${id}`); }
+  get(id: number) { return this.http.get<any>(`${this.base}/payments/order/${id}`); }
 }

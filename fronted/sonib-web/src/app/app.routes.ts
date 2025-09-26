@@ -55,5 +55,27 @@ export const routes: Routes = [
 
 
 
+  {
+    path: 'checkout/success',
+    loadComponent: () =>
+      import('./features/checkout/success/checkout-success.component')
+        .then(m => m.CheckoutSuccessComponent)
+  },
+  {
+    path: 'checkout/cancel',
+    loadComponent: () =>
+      import('./features/checkout/cancel/checkout-cancel.component')
+        .then(m => m.CheckoutCancelComponent)
+  },
+
+  // Mis pedidos
+  {
+    path: 'account/orders',
+    loadComponent: () =>
+      import('./features/account/orders/my-orders.component')
+        .then(m => m.MyOrdersComponent)
+  },
+
+  // ⛳️ Siempre al final
   { path: '**', redirectTo: 'catalog' }
 ];
