@@ -2,6 +2,7 @@ using ImportadoraSonib.Data;
 using ImportadoraSonib.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace ImportadoraSonib.Controllers.Api;
 
@@ -46,9 +47,12 @@ public class CartItemsController : ControllerBase
         if (p is null) return NotFound("Producto no existe o no disponible.");
 
         await _cart.AddAsync(req.ProductId, req.Qty);
-        _ = _reco.TrackAsync("add", req.ProductId);
+         // 🧠 evento "add"
+    var uid = User.FindFirstValue(ClaimTypes.NameIdentifier);
+    var sid = HttpContext.Session?.Id ?? Guid.NewGuid().ToString("N");
+    _ = _reco.TrackAsync("add", req.ProductId, uid, sid);
 
-        return NoContent();
+    return NoContent();
     }
 
     // Quitar UN producto del carrito

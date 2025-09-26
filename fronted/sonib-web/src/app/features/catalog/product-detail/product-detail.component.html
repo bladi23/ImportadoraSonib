@@ -20,4 +20,17 @@
       </div>
     </div>
   </div>
+<section class="recos" *ngIf="recos.length">
+  <h3>También te puede interesar</h3>
+  <div class="grid">
+    <a *ngFor="let r of recos" [routerLink]="['/product', r.slug]" class="rcard" aria-label="Ver {{ r.name }}">
+      <img [src]="r.imageUrl || 'https://via.placeholder.com/300x200?text=Producto'"
+           [alt]="r.name">
+      <div class="title">{{ r.name }}</div>
+      <div class="price">$ {{ r.price | number:'1.2-2' }}</div>
+    </a>
+  </div>
+</section>
+
+
 </section>

@@ -1,6 +1,7 @@
 ﻿using ImportadoraSonib.Data;
 using ImportadoraSonib.DTOs;
 using ImportadoraSonib.Services;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
@@ -91,7 +92,9 @@ public class ProductsController : ControllerBase
             p.Id, p.Name, p.Slug, p.Description, p.Price, p.ImageUrl, p.Stock, p.CategoryId, p.Category!.Name);
 
         _cache.Set(key, dto, TimeSpan.FromSeconds(60));
-        _ = _reco.TrackAsync("view", p.Id);
+         var uid = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var sid = HttpContext.Session?.Id ?? Guid.NewGuid().ToString("N");
+        _ = _reco.TrackAsync("view", p.Id, uid, sid);
 
         return Ok(dto);
     }

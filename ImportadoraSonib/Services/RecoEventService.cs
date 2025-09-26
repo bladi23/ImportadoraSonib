@@ -27,4 +27,19 @@ public class RecoEventService
         _db.ProductEvents.Add(ev);
         await _db.SaveChangesAsync();
     }
+    public async Task TrackManyAsync(string ev, IEnumerable<int> productIds, string? userId, string sessionId)
+    {
+        var now = DateTime.UtcNow;
+        var rows = productIds
+            .Distinct()
+            .Select(pid => new ProductEvent {
+                ProductId = pid,
+                EventType = ev,
+                UserId = userId,
+                SessionId = sessionId,
+                CreatedAt = now
+            });
+        _db.ProductEvents.AddRange(rows);
+        await _db.SaveChangesAsync();
+    }
 }
